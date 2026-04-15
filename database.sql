@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS transaksi (
     denda INT DEFAULT 0,
     pembayaran ENUM('belum bayar', 'lunas') DEFAULT 'belum bayar',
     metode_pembayaran VARCHAR(50) DEFAULT NULL,
+    bukti_kartu VARCHAR(255) DEFAULT NULL,
     FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
 );
 
