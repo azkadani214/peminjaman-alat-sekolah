@@ -31,25 +31,21 @@ if (isset($_POST['submit_kembali'])) {
     $waktu_kembali_input = $tgl_kembali . ' ' . $jam_kembali;
     $kondisi = $_POST['kondisi'];
 
-    $waktu_batas = strtotime($data['batas_kembali']);
-    $waktu_kembali = strtotime($waktu_kembali_input);
-
-    $denda = 0; $keterlambatan = 'tidak';
-    if ($waktu_kembali > $waktu_batas) {
-        $selisih = $waktu_kembali - $waktu_batas;
-        $hari_terlambat = ceil($selisih / (60 * 60 * 24));
-        $denda = $hari_terlambat * 5000;
-        $keterlambatan = 'ya';
-    }
+    $denda_kerusakan = (int)($_POST['denda_kerusakan'] ?? 0);
+    $denda_keterlambatan = hitungDenda($data['batas_kembali'], $waktu_kembali_input);
+    $total_denda = $denda_keterlambatan + $denda_kerusakan;
+    $keterlambatan = ($denda_keterlambatan > 0) ? 'ya' : 'tidak';
 
     $id_petugas = $_SESSION['id_user'];
     $update = "UPDATE transaksi SET 
                 status = 'dikembalikan',
                 waktu_kembali = '$waktu_kembali_input',
                 kondisi = '$kondisi',
-                denda = $denda,
+                denda = $total_denda,
+                denda_kerusakan = $denda_kerusakan,
                 keterlambatan = '$keterlambatan',
-                id_petugas = $id_petugas
+                id_petugas = $id_petugas,
+                pembayaran = 'belum bayar'
                WHERE id_transaksi = $id_transaksi";
 
     if (mysqli_query($connect, $update)) {
@@ -124,6 +120,22 @@ if (isset($_POST['submit_kembali'])) {
                           placeholder="Catatan kondisi..."></textarea>
             </div>
 
+            <div>
+                <label class="block text-[10px] font-black text-popfit-dark uppercase tracking-[0.2em] mb-2.5">Denda Kerusakan (Manual)</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-popfit-dark">RP</span>
+                    <input type="number" name="denda_kerusakan" value="0" min="0"
+                           class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-popfit-border text-xs font-black focus:border-popfit-dark outline-none rounded-sm transition-all">
+                </div>
+            </div>
+
+            <div id="delayInfoBox" class="p-4 bg-popfit-dark rounded-sm transition-all">
+                <p class="text-[10px] font-black text-popfit-accent uppercase tracking-widest mb-1 italic">* INFO KETERLAMBATAN</p>
+                <div id="delayDetails" class="text-[11px] text-white font-medium leading-relaxed">
+                    Sedang menghitung...
+                </div>
+            </div>
+
             <div class="pt-4 flex flex-col space-y-3">
                 <button type="submit" name="submit_kembali" class="w-full bg-popfit-dark text-white py-4 text-[11px] font-black uppercase tracking-[0.3em] rounded-sm hover:bg-popfit-light transition-all">
                     Konfirmasi Kembali
@@ -132,5 +144,44 @@ if (isset($_POST['submit_kembali'])) {
             </div>
         </form>
     </div>
+    <script>
+        const tglInput = document.querySelector('input[name="tgl_kembali"]');
+        const jamInput = document.querySelector('input[name="jam_kembali"]');
+        const infoBox = document.getElementById('delayInfoBox');
+        const infoDetails = document.getElementById('delayDetails');
+        const batasKembali = "<?= $data['batas_kembali'] ?>";
+
+        function updateDelayInfo() {
+            const tgl = tglInput.value;
+            const jam = jamInput.value;
+            if(!tgl || !jam) return;
+
+            const waktuKembali = new Date(tgl + 'T' + jam);
+            const tsBatas = new Date(batasKembali.replace(' ', 'T'));
+            
+            const selisihMs = waktuKembali - tsBatas;
+            const selisihMenit = Math.ceil(selisihMs / (1000 * 60));
+
+            if(selisihMenit <= 0) {
+                infoBox.className = "p-4 bg-green-600 rounded-sm transition-all";
+                infoDetails.innerHTML = "Tepat Waktu / Lebih Awal. <b class='text-white'>Tidak ada denda keterlambatan.</b>";
+            } else {
+                infoBox.className = "p-4 bg-popfit-dark rounded-sm transition-all border-l-4 border-popfit-accent";
+                const jamTelat = Math.floor(selisihMenit / 60);
+                const menitTelat = selisihMenit % 60;
+                const denda = Math.ceil(selisihMenit / 30) * 5000;
+                
+                let teks = "";
+                if(jamTelat > 0) teks += jamTelat + " Jam ";
+                if(menitTelat > 0) teks += menitTelat + " Menit";
+                
+                infoDetails.innerHTML = "Terlambat: <b class='text-popfit-accent'>" + teks + "</b><br>Estimasi Denda: <b class='text-popfit-accent'>Rp " + denda.toLocaleString('id-ID') + "</b>";
+            }
+        }
+
+        tglInput.addEventListener('change', updateDelayInfo);
+        jamInput.addEventListener('change', updateDelayInfo);
+        updateDelayInfo();
+    </script>
 </body>
 </html>

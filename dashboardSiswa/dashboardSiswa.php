@@ -62,62 +62,17 @@ $totalPeminjaman = mysqli_fetch_assoc(mysqli_query($connect, "SELECT COUNT(*) AS
 
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
 
-    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0 z-50 sidebar -translate-x-full md:translate-x-0 md:static flex flex-col">
-        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark justify-between">
-            <div class="flex items-center">
-                <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
-                <span class="text-xl font-black tracking-wide uppercase">PopFit</span>
-            </div>
-            <button id="closeSidebar" class="md:hidden text-gray-400 hover:text-white"><i class="ph ph-x text-2xl"></i></button>
-        </div>
-
-        <nav class="flex-1 overflow-y-auto py-4">
-            <ul class="space-y-1">
-                <li><a href="dashboardSiswa.php" class="nav-active flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-squares-four text-xl w-6"></i><span class="ml-3 font-bold">Beranda</span>
-                </a></li>
-                <li class="px-6 py-2 mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Peminjaman</li>
-                <li><a href="alat/daftarAlat.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-basketball text-xl w-6"></i><span class="ml-3 font-bold">Cari Alat</span>
-                </a></li>
-                <li><a href="transaksi/transaksi.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-arrows-left-right text-xl w-6"></i><span class="ml-3 font-bold">Transaksi</span>
-                </a></li>
-                <li><a href="denda/denda.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-wallet text-xl w-6"></i><span class="ml-3 font-bold">Denda</span>
-                </a></li>
-                <li><a href="riwayat/riwayat.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-clock-rotate-left text-xl w-6"></i><span class="ml-3 font-bold">Riwayat</span>
-                </a></li>
-            </ul>
-        </nav>
-
-        <div class="border-t border-popfit-light p-4">
-            <div class="flex items-center w-full">
-                <div class="w-8 h-8 rounded-sm bg-popfit-accent flex items-center justify-center text-popfit-dark font-black"><?= substr($siswaName, 0, 1) ?></div>
-                <div class="ml-3 flex-1 overflow-hidden">
-                    <p class="text-[12px] font-black text-white truncate uppercase"><?= $siswaName ?></p>
-                    <p class="text-[10px] text-gray-400 truncate uppercase"><?= $siswaUsername ?></p>
-                </div>
-                <a href="../logout.php" class="text-gray-400 hover:text-white transition-colors"><i class="ph ph-sign-out text-xl"></i></a>
-            </div>
-        </div>
-    </aside>
+    <?php 
+        $rel = "./"; 
+        $activeIndex = "dashboard"; 
+        include '../layout/sidebar_siswa.php'; 
+    ?>
 
     <div class="flex-1 flex flex-col h-screen w-full relative">
-        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
-            <div class="flex items-center">
-                <button id="openSidebar" class="md:hidden mr-4 text-popfit-dark"><i class="ph ph-list text-2xl"></i></button>
-                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Beranda Siswa</h2>
-            </div>
-            <div class="flex items-center space-x-6">
-                <a href="keranjang/keranjang.php" class="relative text-popfit-textMuted hover:text-popfit-dark">
-                    <i class="ph ph-shopping-cart text-2xl"></i>
-                    <?php if($countKeranjang > 0): ?><span class="absolute -top-1.5 -right-1.5 bg-popfit-accent text-popfit-dark text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white"><?= $countKeranjang ?></span><?php endif; ?>
-                </a>
-                <a href="notif.php" class="text-popfit-textMuted hover:text-popfit-dark"><i class="ph ph-bell text-2xl"></i></a>
-            </div>
-        </header>
+        <?php 
+            $pageTitle = "Beranda"; 
+            include '../layout/header_siswa.php'; 
+        ?>
 
         <main class="flex-1 overflow-y-auto p-6">
             <div class="bg-popfit-dark p-8 rounded-sm text-white mb-8 border-l-4 border-popfit-accent">

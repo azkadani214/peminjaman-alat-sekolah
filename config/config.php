@@ -93,15 +93,88 @@ function uploadFoto($file) {
     return $namaBaru;
 }
 
-/* HITUNG DENDA OTOMATIS */
-function hitungDenda($batasKembali, $waktuKembali = null) {
+/* HITUNG DENDA & CEK KETERLAMBATAN */
+function cekDetailKeterlambatan($batasKembali, $waktuKembali = null) {
     if (!$waktuKembali) $waktuKembali = date("Y-m-d H:i:s");
-    $selisih = strtotime($waktuKembali) - strtotime($batasKembali);
-    if ($selisih > 0) {
-        $hari = ceil($selisih / (60 * 60 * 24));
-        return $hari * 2000; // Biaya denda per hari
+    
+    $tsBatas = strtotime($batasKembali);
+    $tsKembali = strtotime($waktuKembali);
+    $selisih = $tsKembali - $tsBatas;
+    
+    if ($selisih <= 0) {
+        return [
+            'is_telat' => false,
+            'total_detik' => 0,
+            'total_menit' => 0,
+            'jam' => 0,
+            'menit' => 0,
+            'denda' => 0,
+            'teks' => 'Tepat Waktu'
+        ];
     }
-    return 0;
+    
+    $totalMenit = ceil($selisih / 60);
+    $jam = floor($totalMenit / 60);
+    $menit = $totalMenit % 60;
+    
+    // Rp 5.000 per 30 menit
+    $jumlahPeriode = ceil($totalMenit / 30);
+    $denda = $jumlahPeriode * 5000;
+    
+    $teks = "";
+    if ($jam > 0) $teks .= $jam . " Jam ";
+    if ($menit > 0) $teks .= $menit . " Menit";
+    if (empty($teks)) $teks = "Beberapa detik";
+    
+    return [
+        'is_telat' => true,
+        'total_detik' => $selisih,
+        'total_menit' => $totalMenit,
+        'jam' => $jam,
+        'menit' => $menit,
+        'denda' => $denda,
+        'teks' => $teks
+    ];
+}
+
+function hitungDenda($batasKembali, $waktuKembali = null) {
+    $detail = cekDetailKeterlambatan($batasKembali, $waktuKembali);
+    return $detail['denda'];
+}
+
+/* VALIDASI ATURAN SEKOLAH */
+function isOperationalHour($time = null) {
+    if (!$time) $time = date("H:i");
+    else $time = date("H:i", strtotime($time));
+    
+    $start = "06:45";
+    $end = "17:00";
+    return ($time >= $start && $time <= $end);
+}
+
+function canUserBorrow($idUser) {
+    global $connect;
+    // Cek Pinjaman Aktif
+    $cekAktif = mysqli_query($connect, "SELECT id_transaksi FROM transaksi WHERE id_user = $idUser AND status = 'dipinjam'");
+    if (mysqli_num_rows($cekAktif) > 0) return ["error" => "Anda masih memiliki pinjaman aktif yang belum kembali."];
+
+    // Cek Denda Belum Bayar
+    $cekDenda = mysqli_query($connect, "SELECT id_transaksi FROM transaksi WHERE id_user = $idUser AND pembayaran != 'lunas' AND denda > 0");
+    if (mysqli_num_rows($cekDenda) > 0) return ["error" => "Anda memiliki denda yang belum dibayar. Harap lunasi terlebih dahulu."];
+
+    return ["success" => true];
+}
+
+function validateDuration($waktuPinjam, $batasKembali) {
+    $start = strtotime($waktuPinjam);
+    $end = strtotime($batasKembali);
+    $durasi = $end - $start;
+    $maxDurasi = 5 * 60 * 60; // 5 Jam dalam detik
+
+    if ($durasi > $maxDurasi) return ["error" => "Maksimal durasi peminjaman adalah 5 jam."];
+    if ($durasi <= 0) return ["error" => "Waktu kembali harus lebih besar dari waktu pinjam."];
+    
+    return ["success" => true];
 }
 
 /* TRANSAKSI */

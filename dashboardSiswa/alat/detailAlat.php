@@ -196,8 +196,35 @@ $imgSrc = (strpos($foto, 'http') === 0) ? $foto : "../../asset/$foto";
                         method: 'POST',
                         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                         body: `id=${id}&jumlah=${result.value}`
-                    }).then(res => res.text()).then(data => {
-                        window.location.href = '../keranjang/keranjang.php';
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            Swal.fire({
+                                title: 'BERHASIL BERHASIL HORE!',
+                                text: data.message,
+                                icon: 'success',
+                                confirmButtonColor: '#2A4736',
+                                customClass: { popup: 'rounded-sm' }
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'GAGAL',
+                                text: data.message,
+                                confirmButtonColor: '#2A4736'
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ERROR',
+                            text: 'Terjadi kesalahan sistem. Silakan coba lagi.',
+                            confirmButtonColor: '#2A4736'
+                        });
                     });
                 }
             });

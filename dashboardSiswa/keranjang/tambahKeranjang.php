@@ -2,32 +2,26 @@
 require '../../config/config.php';
 session_start();
 
+header('Content-Type: application/json');
+
 // CEK LOGIN
 if (!isset($_SESSION["login"]) || $_SESSION["role"] != "siswa") {
-    echo "Anda harus login terlebih dahulu";
+    echo json_encode(['status' => 'error', 'message' => 'Anda harus login terlebih dahulu']);
     exit;
 }
 
-// AMBIL DATA USER (PAKAI users, BUKAN siswa!)
-$username = $_SESSION['username'];
+$id_user = $_SESSION['id_user'];
 
-$queryUser = mysqli_query($connect, "
-    SELECT id_user FROM users 
-    WHERE username = '$username' AND role = 'siswa'
-");
-
-$dataUser = mysqli_fetch_assoc($queryUser);
-
-if (!$dataUser) {
-    echo "User tidak ditemukan";
+// CEK ATURAN PEMINJAMAN (DENDA/LOAN AKTIF)
+$cekAturan = canUserBorrow($id_user);
+if (isset($cekAturan['error'])) {
+    echo json_encode(['status' => 'error', 'message' => $cekAturan['error']]);
     exit;
 }
-
-$id_user = $dataUser['id_user'];
 
 // VALIDASI INPUT
 if (!isset($_POST['id']) || !isset($_POST['jumlah'])) {
-    echo "Data tidak lengkap";
+    echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap']);
     exit;
 }
 
@@ -35,7 +29,7 @@ $id = mysqli_real_escape_string($connect, $_POST['id']);
 $jumlah = (int) $_POST['jumlah'];
 
 if ($jumlah < 1) {
-    echo "Jumlah minimal 1";
+    echo json_encode(['status' => 'error', 'message' => 'Jumlah minimal 1']);
     exit;
 }
 
@@ -48,20 +42,20 @@ $cekAlat = mysqli_query($connect, "
 $dataAlat = mysqli_fetch_assoc($cekAlat);
 
 if (!$dataAlat) {
-    echo "Alat tidak ditemukan";
+    echo json_encode(['status' => 'error', 'message' => 'Alat tidak ditemukan']);
     exit;
 }
 
 $stok = (int) $dataAlat['stok'];
 
 if ($jumlah > $stok) {
-    echo "Jumlah melebihi stok";
+    echo json_encode(['status' => 'error', 'message' => 'Jumlah melebihi stok']);
     exit;
 }
 
 // CEK SUDAH ADA DI KERANJANG (PAKAI id_user)
 $cek = mysqli_query($connect, "
-    SELECT jumlah FROM keranjang 
+    SELECT id_keranjang, jumlah FROM keranjang 
     WHERE id_user = '$id_user' 
     AND id_alat_olahraga = '$id'
 ");
@@ -82,7 +76,7 @@ if (mysqli_num_rows($cek) > 0) {
         AND id_alat_olahraga = '$id'
     ");
 
-    echo "Jumlah berhasil diperbarui di keranjang";
+    echo json_encode(['status' => 'success', 'message' => 'Jumlah berhasil diperbarui di keranjang', 'new_count' => $jumlahBaru]);
 } else {
     // INSERT BARU (PAKAI id_user)
     mysqli_query($connect, "
@@ -90,6 +84,6 @@ if (mysqli_num_rows($cek) > 0) {
         VALUES ('$id_user', '$id', '$jumlah')
     ");
 
-    echo "Alat berhasil ditambahkan ke keranjang";
+    echo json_encode(['status' => 'success', 'message' => 'Alat berhasil ditambahkan ke keranjang']);
 }
-?>
+?>

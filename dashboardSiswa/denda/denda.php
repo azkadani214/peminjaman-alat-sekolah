@@ -15,9 +15,31 @@ $countKeranjang = mysqli_fetch_assoc(mysqli_query($connect, "SELECT COUNT(*) as 
 
 $query = "SELECT t.* 
           FROM transaksi t 
-          WHERE t.id_user = '$id_user' AND t.denda > 0 
+          WHERE t.id_user = '$id_user' 
+          AND (t.denda > 0 OR t.status = 'dipinjam')
           ORDER BY t.pembayaran ASC, t.waktu_pinjam DESC";
 $result = mysqli_query($connect, $query);
+
+$listDenda = [];
+while($row = mysqli_fetch_assoc($result)){
+    $idT = $row['id_transaksi'];
+    // Ambil nama-nama alat
+    $qItems = mysqli_query($connect, "SELECT a.nama_alat_olahraga FROM detail_transaksi dt JOIN alat_olahraga a ON dt.id_alat_olahraga = a.id_alat_olahraga WHERE dt.id_transaksi = '$idT'");
+    $itemNames = [];
+    while($i = mysqli_fetch_assoc($qItems)) $itemNames[] = $i['nama_alat_olahraga'];
+    $row['nama_barang'] = implode(", ", $itemNames);
+
+    if($row['status'] == 'dipinjam'){
+        $det = cekDetailKeterlambatan($row['batas_kembali']);
+        if($det['is_telat']){
+            $row['denda_berjalan'] = $det['denda'];
+            $row['keterangan_telat'] = $det['teks'];
+            $listDenda[] = $row;
+        }
+    } else if($row['denda'] > 0){
+        $listDenda[] = $row;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -101,36 +123,43 @@ $result = mysqli_query($connect, $query);
     </aside>
 
     <div class="flex-1 flex flex-col h-screen w-full relative">
-        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
-            <div class="flex items-center">
-                <button id="openSidebar" class="md:hidden mr-4 text-popfit-dark"><i class="ph ph-list text-2xl"></i></button>
-                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Denda Saya</h2>
-            </div>
-        </header>
+        <?php 
+            $pageTitle = "Denda Saya"; 
+            include '../../layout/header_siswa.php'; 
+        ?>
 
         <main class="flex-1 overflow-y-auto p-6">
             <div class="space-y-4">
-                <?php while($row = mysqli_fetch_assoc($result)): 
+                <?php foreach($listDenda as $row): 
                     $isLunas = ($row['pembayaran'] == 'lunas');
+                    $isAktif = ($row['status'] == 'dipinjam');
                     $bg = $isLunas ? 'border-green-100 bg-white' : 'border-red-100 bg-white';
+                    
+                    $totalDenda = $isAktif ? $row['denda_berjalan'] : $row['denda'];
+                    $labelStatus = $isAktif ? 'AKTIF (BELUM KEMBALI)' : ($row['pembayaran'] ?: 'BELUM BAYAR');
                 ?>
                 <div class="border border-popfit-border rounded-sm p-6 flex flex-col md:flex-row items-center justify-between group hover:border-popfit-dark transition-all <?= $bg ?>">
                     <div class="flex items-center space-x-4">
                         <div class="w-12 h-12 <?= $isLunas ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600' ?> rounded-sm flex items-center justify-center border border-current opacity-20"><i class="ph ph-warning-circle text-2xl"></i></div>
                         <div>
                             <h4 class="text-[12px] font-black text-popfit-dark uppercase tracking-tight">TRANSAKSI #<?= $row['id_transaksi'] ?></h4>
-                            <p class="text-[10px] font-bold text-popfit-textMuted uppercase mt-1">Rp <?= number_format($row['denda'], 0, ',', '.') ?></p>
+                            <p class="text-[10px] font-black text-popfit-light uppercase mt-0.5 tracking-tighter">ALAT: <?= htmlspecialchars($row['nama_barang']) ?></p>
+                            <p class="text-[10px] font-bold text-popfit-textMuted uppercase mt-1">Rp <?= number_format($totalDenda, 0, ',', '.') ?> <?= $isAktif ? '<span class="text-red-500 ml-1 italic">(ESTIMASI: '.$row['keterangan_telat'].')</span>' : '' ?></p>
                         </div>
                     </div>
                     <div class="mt-4 md:mt-0 flex items-center space-x-6">
-                        <span class="px-3 py-1.5 rounded-sm text-[10px] font-black uppercase tracking-widest <?= $isLunas ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700' ?>">
-                            <?= strtoupper($row['pembayaran'] ?: 'BELUM BAYAR') ?>
+                        <span class="px-3 py-1.5 rounded-sm text-[10px] font-black uppercase tracking-widest <?= $isLunas ? 'bg-green-50 text-green-700' : ($isAktif ? 'bg-popfit-accent text-popfit-dark' : 'bg-red-50 text-red-700') ?>">
+                            <?= strtoupper($labelStatus) ?>
                         </span>
+                        <?php if(!$isAktif): ?>
                         <a href="detailDenda.php?id=<?= $row['id_transaksi'] ?>" class="text-[10px] font-black uppercase tracking-widest bg-popfit-dark text-white px-4 py-2 rounded-sm hover:bg-popfit-light transition-all">Bayar / Detail</a>
+                        <?php else: ?>
+                        <a href="../transaksi/detailTransaksi.php?id=<?= $row['id_transaksi'] ?>" class="text-[10px] font-black uppercase tracking-widest border border-popfit-dark text-popfit-dark px-4 py-2 rounded-sm hover:bg-popfit-dark hover:text-white transition-all">Lihat Pinjaman</a>
+                        <?php endif; ?>
                     </div>
                 </div>
-                <?php endwhile; ?>
-                <?php if(mysqli_num_rows($result) == 0): ?>
+                <?php endforeach; ?>
+                <?php if(empty($listDenda)): ?>
                 <div class="py-20 text-center bg-white border-2 border-dashed border-popfit-border rounded-sm">
                     <i class="ph ph-smiley-check text-5xl text-popfit-dark mb-4 block mx-auto opacity-20"></i>
                     <p class="text-[11px] font-black uppercase tracking-widest text-popfit-textMuted lowercase">Tidak ada tanggungan denda. Kamu hebat!</p>
@@ -144,8 +173,10 @@ $result = mysqli_query($connect, $query);
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         const openBtn = document.getElementById('openSidebar');
+        const closeBtn = document.getElementById('closeSidebar');
         function toggleSidebar() { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
         openBtn.addEventListener('click', toggleSidebar);
+        closeBtn.addEventListener('click', toggleSidebar);
         overlay.addEventListener('click', toggleSidebar);
     </script>
 </body>

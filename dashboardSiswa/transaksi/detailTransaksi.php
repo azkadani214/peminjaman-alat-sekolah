@@ -58,24 +58,17 @@ $items = mysqli_query($connect, "SELECT dt.*, a.nama_alat_olahraga, a.foto_alat_
 </head>
 <body class="bg-popfit-bg text-popfit-text font-sans h-screen overflow-hidden flex text-[13px]">
 
-    <aside class="hidden md:flex flex-col w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0">
-        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark">
-            <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
-            <span class="text-xl font-black tracking-wide uppercase">PopFit</span>
-        </div>
-        <nav class="flex-1 overflow-y-auto py-4">
-            <ul class="space-y-1">
-                <li><a href="../dashboardSiswa.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent"><i class="ph ph-squares-four text-xl w-6"></i><span class="ml-3 font-bold">Beranda</span></a></li>
-                <li><a href="transaksi.php" class="nav-active flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent"><i class="ph ph-arrows-left-right text-xl w-6"></i><span class="ml-3 font-bold">Transaksi</span></a></li>
-            </ul>
-        </nav>
-    </aside>
+    <?php 
+        $rel = "../"; 
+        $activeIndex = "transaksi"; 
+        include '../../layout/sidebar_siswa.php'; 
+    ?>
 
     <div class="flex-1 flex flex-col h-screen overflow-hidden">
-        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center px-6 flex-shrink-0">
-            <a href="transaksi.php" class="mr-4 text-popfit-dark hover:scale-110 transition-transform"><i class="ph ph-arrow-left text-2xl"></i></a>
-            <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Rincian Peminjaman #<?= $id ?></h2>
-        </header>
+        <?php 
+            $pageTitle = "Rincian Peminjaman #$id"; 
+            include '../../layout/header_siswa.php'; 
+        ?>
 
         <main class="flex-1 overflow-y-auto p-6">
             <div class="max-w-4xl mx-auto space-y-6">
@@ -120,9 +113,34 @@ $items = mysqli_query($connect, "SELECT dt.*, a.nama_alat_olahraga, a.foto_alat_
                     </table>
                 </div>
 
-                <?php if($trans['status'] == 'dipinjam'): ?>
-                <div class="bg-popfit-accent/10 border border-popfit-accent p-6 rounded-sm">
-                    <p class="text-[10px] font-black text-popfit-dark uppercase tracking-widest leading-loose">Harap kembalikan alat tepat waktu. Keterlambatan akan dikenakan denda sebesar <span class="text-red-600">Rp 5.000 / hari</span> secara otomatis.</p>
+                <?php if($trans['denda'] > 0 && $trans['pembayaran'] != 'lunas'): ?>
+                <div class="bg-red-50 border-2 border-red-500 p-8 rounded-sm text-center shadow-lg relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-2 opacity-10">
+                        <i class="ph ph-warning-circle text-8xl"></i>
+                    </div>
+                    <h5 class="text-[12px] font-black text-red-600 uppercase tracking-[0.2em] mb-2">Tagihan Denda Terdeteksi</h5>
+                    <p class="text-[14px] font-black text-popfit-dark mb-6 leading-tight uppercase">Anda memiliki denda sebesar Rp <?= number_format($trans['denda'], 0, ',', '.') ?> yang belum terlunasi.</p>
+                    
+                    <?php if($trans['pembayaran'] == 'pending'): ?>
+                        <div class="py-3 px-6 bg-popfit-accent text-popfit-dark rounded-sm text-[10px] font-black uppercase tracking-widest inline-flex items-center">
+                            <i class="ph ph-clock-countdown mr-2 text-lg"></i> Menunggu Verifikasi Admin
+                        </div>
+                    <?php elseif($trans['pembayaran'] == 'ditolak'): ?>
+                        <div class="mb-4">
+                            <p class="text-[10px] font-black text-red-600 uppercase mb-2 italic">Ditolak: <?= htmlspecialchars($trans['alasan_penolakan']) ?></p>
+                            <a href="../denda/detailDenda.php?id=<?= $id ?>" class="w-full md:w-auto inline-flex items-center justify-center bg-red-600 text-white px-8 py-4 rounded-sm text-[11px] font-black uppercase tracking-[0.2em] hover:bg-red-700 transition-all shadow-md active:scale-95">
+                                Re-upload Bukti Bayar
+                            </a>
+                        </div>
+                    <?php else: ?>
+                        <a href="../denda/detailDenda.php?id=<?= $id ?>" class="w-full md:w-auto inline-flex items-center justify-center bg-popfit-dark text-white px-8 py-4 rounded-sm text-[11px] font-black uppercase tracking-[0.2em] hover:bg-popfit-light transition-all shadow-md active:scale-95">
+                            Bayar Denda Sekarang
+                        </a>
+                    <?php endif; ?>
+                </div>
+                <?php elseif($trans['status'] == 'dipinjam'): ?>
+                <div class="bg-popfit-accent/10 border border-popfit-accent p-6 rounded-sm text-center">
+                    <p class="text-[10px] font-black text-popfit-dark uppercase tracking-widest leading-loose">Harap kembalikan alat tepat waktu. Keterlambatan akan dikenakan denda keterlambatan secara otomatis.</p>
                 </div>
                 <?php endif; ?>
             </div>

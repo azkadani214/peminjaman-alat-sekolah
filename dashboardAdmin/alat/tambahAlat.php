@@ -7,6 +7,9 @@ if (!isset($_SESSION["login"]) || ($_SESSION["role"] != "admin utama" && $_SESSI
     exit;
 }
 
+$adminName = htmlspecialchars($_SESSION['nama'] ?? 'Admin');
+$adminUsername = htmlspecialchars($_SESSION['username'] ?? 'username');
+
 $kategori_res = mysqli_query($connect, "SELECT * FROM kategori_alat_olahraga ORDER BY kategori ASC");
 
 if(isset($_POST['simpan'])){
@@ -31,6 +34,7 @@ if(isset($_POST['simpan'])){
               VALUES ('$id_alat', '$nama', '$kategori', '$deskripsi', $stok, '$foto')";
     
     if(mysqli_query($connect, $query)){
+        tambahLog($_SESSION['id_user'], "Menambahkan alat baru: $nama (#$id_alat)");
         header("Location: daftarAlat.php?msg=tambah_success");
         exit;
     } else {
@@ -48,7 +52,8 @@ if(isset($_POST['simpan'])){
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -70,55 +75,99 @@ if(isset($_POST['simpan'])){
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #E4E4E7; }
         * { box-shadow: none !important; }
+        .sidebar { transition: transform 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-popfit-bg text-popfit-text font-sans h-screen overflow-hidden flex text-[13px]">
 
-    <aside class="hidden md:flex flex-col w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0">
-        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark">
-            <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
-            <span class="text-xl font-black tracking-wide uppercase">PopFit</span>
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
+
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0 z-50 sidebar -translate-x-full md:translate-x-0 md:static flex flex-col">
+        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark justify-between">
+            <div class="flex items-center">
+                <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
+                <span class="text-xl font-black tracking-wide uppercase">PopFit Admin</span>
+            </div>
+            <button id="closeSidebar" class="md:hidden text-gray-400 hover:text-white"><i class="ph ph-x text-2xl"></i></button>
         </div>
+
         <nav class="flex-1 overflow-y-auto py-4">
             <ul class="space-y-1">
-                <li><a href="../dashboardAdmin.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent"><i class="ph ph-squares-four text-xl w-6"></i><span class="ml-3 font-bold">Dashboard</span></a></li>
+                <li><a href="../dashboardAdmin.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-squares-four text-xl w-6"></i><span class="ml-3 font-bold">Dashboard</span>
+                </a></li>
                 <li class="px-6 py-2 mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manajemen</li>
-                <li><a href="daftarAlat.php" class="nav-active flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent"><i class="ph ph-basketball text-xl w-6"></i><span class="ml-3 font-bold">Katalog Alat</span></a></li>
+                <li><a href="daftarAlat.php" class="nav-active flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-basketball text-xl w-6"></i><span class="ml-3 font-bold">Katalog Alat</span>
+                </a></li>
+                <li><a href="../petugas/petugas.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-user-tie text-xl w-6"></i><span class="ml-3 font-bold">Petugas</span>
+                </a></li>
+                <li><a href="../siswa/siswa.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-users text-xl w-6"></i><span class="ml-3 font-bold">Siswa</span>
+                </a></li>
+                <li class="px-6 py-2 mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sirkulasi</li>
+                <li><a href="../transaksi/transaksi.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-arrows-left-right text-xl w-6"></i><span class="ml-3 font-bold">Transaksi</span>
+                </a></li>
+                <li><a href="../denda/denda.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-wallet text-xl w-6"></i><span class="ml-3 font-bold">Denda</span>
+                </a></li>
+                <li><a href="../laporan/laporan.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-file-text text-xl w-6"></i><span class="ml-3 font-bold">Laporan</span>
+                </a></li>
             </ul>
         </nav>
+
+        <div class="border-t border-popfit-light p-4">
+            <div class="flex items-center w-full">
+                <div class="w-8 h-8 rounded-sm bg-popfit-accent flex items-center justify-center text-popfit-dark font-black">A</div>
+                <div class="ml-3 flex-1 overflow-hidden">
+                    <p class="text-[12px] font-black text-white truncate uppercase"><?= $adminName ?></p>
+                    <p class="text-[10px] text-gray-400 truncate uppercase"><?= $adminUsername ?></p>
+                </div>
+                <a href="../../logout.php" class="text-gray-400 hover:text-white transition-colors"><i class="ph ph-sign-out text-xl"></i></a>
+            </div>
+        </div>
     </aside>
 
-    <div class="flex-1 flex flex-col h-screen overflow-hidden">
+    <div class="flex-1 flex flex-col h-screen w-full relative">
         <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
             <div class="flex items-center">
-                <a href="daftarAlat.php" class="mr-4 text-popfit-dark hover:scale-110 transition-transform"><i class="ph ph-arrow-left text-2xl"></i></a>
-                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Tambah Alat Olahraga</h2>
+                <button id="openSidebar" class="md:hidden mr-4 text-popfit-dark"><i class="ph ph-list text-2xl"></i></button>
+                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Tambah Alat</h2>
             </div>
+            <a href="daftarAlat.php" class="flex items-center text-popfit-textMuted hover:text-popfit-dark transition-all text-[11px] font-black uppercase tracking-widest">
+                <i class="ph ph-arrow-left mr-2"></i> Batal
+            </a>
         </header>
 
-        <main class="flex-1 overflow-y-auto p-6 flex items-center justify-center">
-            <div class="w-full max-w-2xl bg-white border border-popfit-border rounded-sm p-8">
+        <main class="flex-1 overflow-y-auto p-6 flex flex-col items-center">
+            <div class="w-full max-w-2xl bg-white border border-popfit-border rounded-sm p-8 shadow-sm">
                 <?php if(isset($error)): ?>
-                <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 text-[10px] font-black uppercase text-red-700 tracking-widest"><?= $error ?></div>
+                    <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 text-[10px] font-black uppercase text-red-700 tracking-widest"><?= $error ?></div>
                 <?php endif; ?>
 
-                <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <form method="POST" enctype="multipart/form-data" class="space-y-6 text-[13px]">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Kode Alat</label>
-                            <input type="text" name="id_alat" required placeholder="BOLA-01" class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all uppercase placeholder:text-gray-300">
+                            <div class="flex items-center justify-between">
+                                <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Kode Alat</label>
+                                <button type="button" id="suggestId" class="text-[9px] font-black text-popfit-accent hover:text-popfit-dark transition-all uppercase tracking-tighter">[ Sarankan ID ]</button>
+                            </div>
+                            <input type="text" name="id_alat" id="id_alat" required placeholder="CONTOH: BOLA-01" class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all uppercase placeholder:text-gray-300">
                         </div>
                         <div class="space-y-2">
                             <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Nama Alat</label>
-                            <input type="text" name="nama" required placeholder="NAMA ALAT" class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all uppercase placeholder:text-gray-300">
+                            <input type="text" name="nama" required placeholder="MASUKKAN NAMA ALAT" class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all uppercase placeholder:text-gray-300">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
+                        <div class="space-y-2 text-[13px]">
                             <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Kategori</label>
-                            <select name="kategori" required class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all">
-                                <option value="" disabled selected>Pilih Kategori</option>
+                            <select name="kategori" id="kategori" required class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all">
+                                <option value="" disabled selected>PILIH KATEGORI</option>
                                 <?php while($k = mysqli_fetch_assoc($kategori_res)): ?>
                                 <option value="<?= $k['kategori'] ?>"><?= strtoupper($k['kategori']) ?></option>
                                 <?php endwhile; ?>
@@ -126,7 +175,7 @@ if(isset($_POST['simpan'])){
                         </div>
                         <div class="space-y-2">
                             <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Stok Awal</label>
-                            <input type="number" name="stok" required placeholder="0" class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all">
+                            <input type="number" name="stok" required min="1" placeholder="JUMLAH STOK" class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all">
                         </div>
                     </div>
 
@@ -135,18 +184,110 @@ if(isset($_POST['simpan'])){
                         <textarea name="deskripsi" rows="3" class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all uppercase placeholder:text-gray-300" placeholder="KETERANGAN ALAT..."></textarea>
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Foto Alat (Optional)</label>
-                        <input type="file" name="foto" class="w-full bg-gray-50 border border-popfit-border rounded-sm px-4 py-2 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all">
+                    <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 p-4 bg-popfit-bg border border-popfit-border rounded-sm">
+                        <div class="w-24 h-24 bg-white border border-popfit-border rounded-sm overflow-hidden flex-shrink-0 flex items-center justify-center shadow-inner relative" id="photoPreview">
+                            <i class="ph ph-image text-3xl text-gray-200"></i>
+                        </div>
+                        <div class="flex-1 space-y-2 w-full">
+                            <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Foto Alat</label>
+                            <input type="file" name="foto" id="fotoInput" accept="image/*" class="w-full bg-white border border-popfit-border rounded-sm px-4 py-2 text-[10px] font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all">
+                            <p class="text-[9px] font-bold text-gray-400 uppercase italic leading-none">* Ukuran maksimal 2MB (JPG, PNG, WebP)</p>
+                        </div>
                     </div>
 
-                    <div class="pt-6 flex space-x-4">
-                        <button type="submit" name="simpan" class="flex-1 bg-popfit-dark text-white py-4 text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-popfit-light transition-all">Simpan Alat</button>
-                        <a href="daftarAlat.php" class="flex-1 bg-white border border-popfit-border text-popfit-dark py-4 text-center text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-popfit-bg transition-all">Batal</a>
+                    <div class="pt-6">
+                        <button type="submit" name="simpan" class="w-full bg-popfit-dark text-white py-4 text-[11px] font-black uppercase tracking-[0.2em] rounded-sm hover:bg-popfit-light transition-all shadow-md active:scale-95">Simpan Data Alat</button>
                     </div>
                 </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Check ID Availability
+        const idAlatInput = document.getElementById('id_alat');
+        idAlatInput.addEventListener('blur', function() {
+            const id = this.value;
+            if(!id) return;
+
+            fetch(`api_cekID.php?id=${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.exists) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'ID SUDAH DIGUNAKAN',
+                            text: 'Gunakan ID lain atau gunakan fitur Sarankan ID.',
+                            confirmButtonColor: '#2A4736'
+                        });
+                        this.value = '';
+                    }
+                });
+        });
+
+        // Suggest ID Logic
+        document.getElementById('suggestId').addEventListener('click', function() {
+            const kat = document.getElementById('kategori').value;
+            if(!kat) { 
+                Swal.fire({
+                    icon: 'info',
+                    text: 'Pilih kategori terlebih dahulu!',
+                    confirmButtonColor: '#F5C460',
+                    confirmButtonText: 'OKE'
+                });
+                return; 
+            }
+            
+            const prefix = kat.substring(0, 4).toUpperCase();
+            const random = Math.floor(Math.random() * 900) + 100;
+            const suggested = `${prefix}-${random}`;
+            
+            // Check if suggested is also taken (unlikely but safe)
+            fetch(`api_cekID.php?id=${suggested}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.exists) {
+                        // try again once
+                        document.getElementById('suggestId').click();
+                    } else {
+                        idAlatInput.value = suggested;
+                    }
+                });
+        });
+
+        // Photo Preview Logic
+        document.getElementById('fotoInput').addEventListener('change', function() {
+            const file = this.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('photoPreview').innerHTML = `<img src="${e.target.result}" class="w-full h-full object-contain">`;
+            }
+            if(file) reader.readAsDataURL(file);
+        });
+
+        // Form Success Handling (if message from URL)
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.get('msg') === 'tambah_success'){
+            Swal.fire({
+                icon: 'success',
+                title: 'BERHASIL',
+                text: 'Data alat berhasil ditambahkan ke katalog!',
+                confirmButtonColor: '#2A4736'
+            });
+        }
+    </script>
             </div>
         </main>
     </div>
+
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const openBtn = document.getElementById('openSidebar');
+        const closeBtn = document.getElementById('closeSidebar');
+
+        function toggleSidebar() { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
+        openBtn.addEventListener('click', toggleSidebar);
+        closeBtn.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+    </script>
 </body>
 </html>

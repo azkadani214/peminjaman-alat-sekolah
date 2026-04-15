@@ -131,7 +131,14 @@ $result = mysqli_query($connect, $query);
                     </thead>
                     <tbody class="divide-y divide-gray-50">
                         <?php while($row = mysqli_fetch_assoc($result)): 
-                             $bg = ($row['pembayaran'] == 'lunas') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600';
+                             $stColor = '';
+                             if ($row['pembayaran'] == 'lunas') {
+                                 $stColor = 'bg-green-50 text-green-600';
+                             } elseif ($row['pembayaran'] == 'pending') {
+                                 $stColor = 'bg-popfit-accent/20 text-popfit-dark border border-popfit-accent/30';
+                             } else {
+                                 $stColor = 'bg-red-50 text-red-600';
+                             }
                         ?>
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4">
@@ -145,7 +152,7 @@ $result = mysqli_query($connect, $query);
                                 <p class="text-sm font-black text-red-600">Rp <?= number_format($row['denda'], 0, ',', '.') ?></p>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="px-2 py-1 rounded-sm text-[9px] font-black uppercase tracking-tighter <?= $bg ?>"><?= $row['pembayaran'] ?: 'BELUM BAYAR' ?></span>
+                                <span class="px-2 py-1 rounded-sm text-[9px] font-black uppercase tracking-tighter <?= $stColor ?>"><?= $row['pembayaran'] ?: 'BELUM BAYAR' ?></span>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <a href="detailDenda.php?id=<?= $row['id_transaksi'] ?>" class="text-[10px] font-black uppercase tracking-widest bg-popfit-dark text-white px-3 py-1.5 rounded-sm hover:bg-popfit-light transition-all flex items-center justify-end">
@@ -167,8 +174,10 @@ $result = mysqli_query($connect, $query);
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         const openBtn = document.getElementById('openSidebar');
+        const closeBtn = document.getElementById('closeSidebar');
         function toggleSidebar() { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
         openBtn.addEventListener('click', toggleSidebar);
+        closeBtn.addEventListener('click', toggleSidebar);
         overlay.addEventListener('click', toggleSidebar);
     </script>
 </body>

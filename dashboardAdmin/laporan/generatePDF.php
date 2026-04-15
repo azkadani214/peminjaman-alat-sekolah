@@ -72,8 +72,9 @@ $result = mysqli_query($connect, $query);
             <thead>
                 <tr>
                     <th>Pinjam</th>
-                    <th>Informasi Siswa</th>
+                    <th>Siswa</th>
                     <th>Status</th>
+                    <th style="text-align: center;">Delay Detail</th>
                     <th style="text-align: right;">Denda</th>
                     <th style="text-align: right;">Payment</th>
                 </tr>
@@ -93,6 +94,15 @@ $result = mysqli_query($connect, $query);
                     </td>
                     <td>
                         <span class="badge status-<?= $st ?>"><?= $st ?></span>
+                    </td>
+                    <td style="text-align: center;">
+                        <?php if($row['keterlambatan'] == 'ya' && $row['waktu_kembali']): 
+                            $det = cekDetailKeterlambatan($row['batas_kembali'], $row['waktu_kembali']);    
+                        ?>
+                            <span style="font-size: 8px; font-weight: 800; color: #DC2626; text-transform: uppercase;">TELAT <?= $det['teks'] ?></span>
+                        <?php else: ?>
+                            <span style="font-size: 8px; font-weight: 500; color: #D1D5DB;">-</span>
+                        <?php endif; ?>
                     </td>
                     <td style="text-align: right; font-weight: 800; color: #111827;">
                         Rp <?= number_format($row['denda'], 0, ',', '.') ?>

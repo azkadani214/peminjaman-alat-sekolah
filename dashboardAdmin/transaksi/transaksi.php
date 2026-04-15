@@ -14,6 +14,10 @@ $adminUsername = htmlspecialchars($_SESSION['username'] ?? 'username');
 
 /* HANDLE ACTIONS */
 if(isset($_GET['approve'])){
+    if(!isOperationalHour()){
+        header("Location: transaksi.php?msg=bukan_jam_kerja");
+        exit;
+    }
     mysqli_query($connect, "UPDATE transaksi SET status = 'dipinjam', id_petugas = '$idPetugas' WHERE id_transaksi = '".$_GET['approve']."'");
     tambahLog($idPetugas, "Menyetujui peminjaman #" . $_GET['approve']);
     header("Location: transaksi.php?msg=disetujui");
@@ -148,7 +152,7 @@ $result = mysqli_query($connect, $query);
                         <tr class="bg-popfit-bg border-b border-popfit-border">
                             <th class="px-6 py-4 text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Waktu</th>
                             <th class="px-6 py-4 text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Siswa</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Status</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Status & Keterlambatan</th>
                             <th class="px-6 py-4 text-[10px] font-black text-popfit-textMuted uppercase tracking-widest text-right">Denda</th>
                             <th class="px-6 py-4 text-[10px] font-black text-popfit-textMuted uppercase tracking-widest text-right">Aksi</th>
                         </tr>
@@ -184,13 +188,51 @@ $result = mysqli_query($connect, $query);
                                 </div>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter <?= $stColor ?>"><?= $st ?></span>
+                                <div class="flex flex-col space-y-1">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter w-fit <?= $stColor ?>"><?= $st ?></span>
+                                        <?php if($row['denda'] > 0): ?>
+                                            <?php if($row['pembayaran'] == 'belum bayar'): ?>
+                                                <span class="px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter w-fit bg-red-600 text-white animate-pulse">DENDA UNPAID</span>
+                                            <?php elseif($row['pembayaran'] == 'pending'): ?>
+                                                <span class="px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter w-fit bg-popfit-accent text-popfit-dark animate-bounce">PENDING VERIFIKASI</span>
+                                            <?php elseif($row['pembayaran'] == 'ditolak'): ?>
+                                                <span class="px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter w-fit bg-red-100 text-red-600 border border-red-200">PAYMENT REJECTED</span>
+                                            <?php elseif($row['pembayaran'] == 'lunas'): ?>
+                                                <span class="px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter w-fit bg-green-100 text-green-700">LUNAS</span>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php 
+                                    if($st == 'dipinjam') {
+                                        $det = cekDetailKeterlambatan($row['batas_kembali']);
+                                        if($det['is_telat']) {
+                                            echo '<span class="text-[9px] font-black text-red-600 uppercase italic">Telat: '.$det['teks'].'</span>';
+                                        }
+                                    } elseif($st == 'dikembalikan' && $row['keterlambatan'] == 'ya') {
+                                        $det = cekDetailKeterlambatan($row['batas_kembali'], $row['waktu_kembali']);
+                                        echo '<span class="text-[9px] font-black text-popfit-textMuted uppercase italic">Selesai Telat: '.$det['teks'].'</span>';
+                                    }
+                                    ?>
+                                </div>
                             </td>
                             <td class="px-6 py-4 text-right">
-                                <?php if($row['denda'] > 0): ?>
-                                    <p class="text-[11px] font-black text-red-600">Rp <?= number_format($row['denda'], 0, ',', '.') ?></p>
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-<?= $row['pembayaran'] == 'lunas' ? 'green-500' : 'red-400' ?> italic"><?= $row['pembayaran'] ?></p>
-                                <?php else: ?><span class="text-gray-200">—</span><?php endif; ?>
+                                <?php 
+                                if($st == 'dipinjam') {
+                                    $det = cekDetailKeterlambatan($row['batas_kembali']);
+                                    if($det['denda'] > 0) {
+                                        echo '<p class="text-[11px] font-black text-red-600">± Rp '.number_format($det['denda'], 0, ',', '.').'</p>';
+                                        echo '<p class="text-[8px] font-bold text-popfit-textMuted uppercase">Estimasi</p>';
+                                    } else {
+                                        echo '<span class="text-gray-200">—</span>';
+                                    }
+                                } elseif($row['denda'] > 0 || $st == 'dikembalikan') {
+                                    echo '<p class="text-[11px] font-black text-popfit-dark">Rp '.number_format($row['denda'], 0, ',', '.').'</p>';
+                                    echo '<p class="text-[8px] font-black uppercase tracking-widest '.($row['pembayaran'] == 'lunas' ? 'text-green-500' : 'text-red-400').' italic">'.$row['pembayaran'].'</p>';
+                                } else {
+                                    echo '<span class="text-gray-200">—</span>';
+                                }
+                                ?>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end space-x-2">
@@ -217,8 +259,10 @@ $result = mysqli_query($connect, $query);
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         const openBtn = document.getElementById('openSidebar');
+        const closeBtn = document.getElementById('closeSidebar');
         function toggleSidebar() { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
         openBtn.addEventListener('click', toggleSidebar);
+        closeBtn.addEventListener('click', toggleSidebar);
         overlay.addEventListener('click', toggleSidebar);
 
         function confirmAction(url, title, text, confirmColor = '#2A4736') {

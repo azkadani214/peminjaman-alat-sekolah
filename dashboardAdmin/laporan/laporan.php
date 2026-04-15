@@ -23,10 +23,15 @@ $result = mysqli_query($connect, $query);
 if(isset($_GET['export'])){
     header("Content-type: application/vnd-ms-excel");
     header("Content-Disposition: attachment; filename=Laporan_Peminjaman_$tgl_mulai.xls");
-    echo "<table border='1'><tr><th>No</th><th>Waktu</th><th>Nama</th><th>Status</th><th>Denda</th></tr>";
+    echo "<table border='1'><tr><th>No</th><th>Waktu Pinjam</th><th>Nama</th><th>Status</th><th>Keterangan Telat</th><th>Total Denda</th></tr>";
     $no = 1;
     while($row = mysqli_fetch_assoc($result)){
-        echo "<tr><td>".$no++."</td><td>".$row['waktu_pinjam']."</td><td>".$row['nama']."</td><td>".$row['status']."</td><td>".$row['denda']."</td></tr>";
+        $ket_telat = "-";
+        if($row['keterlambatan'] == 'ya' && $row['waktu_kembali']){
+            $det = cekDetailKeterlambatan($row['batas_kembali'], $row['waktu_kembali']);
+            $ket_telat = "TELAT " . $det['teks'];
+        }
+        echo "<tr><td>".$no++."</td><td>".$row['waktu_pinjam']."</td><td>".$row['nama']."</td><td>".$row['status']."</td><td>".$ket_telat."</td><td>".$row['denda']."</td></tr>";
     }
     echo "</table>";
     exit;
@@ -158,6 +163,7 @@ if(isset($_GET['export'])){
                             <th class="px-6 py-4 font-black text-popfit-textMuted uppercase tracking-widest">Waktu</th>
                             <th class="px-6 py-4 font-black text-popfit-textMuted uppercase tracking-widest">Siswa</th>
                             <th class="px-6 py-4 font-black text-popfit-textMuted uppercase tracking-widest">Status</th>
+                            <th class="px-6 py-4 font-black text-popfit-textMuted uppercase tracking-widest text-center">Detail Keterlambatan</th>
                             <th class="px-6 py-4 font-black text-popfit-textMuted uppercase tracking-widest text-right">Denda</th>
                         </tr>
                     </thead>
@@ -169,8 +175,17 @@ if(isset($_GET['export'])){
                                 <p class="font-black text-popfit-dark uppercase"><?= htmlspecialchars($row['nama']) ?></p>
                                 <p class="text-[9px] font-bold text-popfit-textMuted uppercase">#<?= $row['nis'] ?></p>
                             </td>
-                            <td class="px-6 py-4">
+                             <td class="px-6 py-4">
                                 <span class="px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest bg-gray-100"><?= $row['status'] ?></span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <?php if($row['keterlambatan'] == 'ya' && $row['waktu_kembali']): 
+                                    $det = cekDetailKeterlambatan($row['batas_kembali'], $row['waktu_kembali']);    
+                                ?>
+                                    <span class="text-[9px] font-black text-red-600 bg-red-50 px-2 py-1 rounded-sm border border-red-100 uppercase tracking-tighter">TELAT <?= $det['teks'] ?></span>
+                                <?php else: ?>
+                                    <span class="text-[9px] font-bold text-gray-300">-</span>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 text-right font-black text-popfit-dark">Rp <?= number_format($row['denda'], 0, ',', '.') ?></td>
                         </tr>
@@ -185,8 +200,10 @@ if(isset($_GET['export'])){
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         const openBtn = document.getElementById('openSidebar');
+        const closeBtn = document.getElementById('closeSidebar');
         function toggleSidebar() { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
         openBtn.addEventListener('click', toggleSidebar);
+        closeBtn.addEventListener('click', toggleSidebar);
         overlay.addEventListener('click', toggleSidebar);
     </script>
 </body>

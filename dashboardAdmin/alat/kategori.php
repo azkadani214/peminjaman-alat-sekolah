@@ -1,43 +1,29 @@
-﻿<?php
+<?php
 require '../../config/config.php';
 session_start();
 
-if (!isset($_SESSION["login"]) || $_SESSION["role"] != "admin") {
+if (!isset($_SESSION["login"]) || ($_SESSION["role"] != "admin utama" && $_SESSION["role"] != "admin")) {
     header("Location: ../../login.php");
     exit;
 }
 
 $adminName = htmlspecialchars($_SESSION['nama'] ?? 'Admin');
-$adminUsername = htmlspecialchars($_SESSION['username'] ?? 'Admin');
-
-/* NOTIFIKASI */
-$file = '../../notifikasi_last_read.txt';
-if (!file_exists($file)) {
-    file_put_contents($file, '2000-01-01 00:00:00');
-}
-$last_read = file_get_contents($file);
-$last_read_ts = strtotime($last_read);
-$jumlahNotifikasi = 0;
-
-// Hanya query ke tabel yang PASTI ADA
-$q4 = mysqli_query($connect, "SELECT tgl_daftar AS waktu FROM users WHERE role = 'siswa'");
-while($d = mysqli_fetch_assoc($q4)) { 
-    if(strtotime($d['waktu']) > $last_read_ts) $jumlahNotifikasi++; 
-}
+$adminUsername = htmlspecialchars($_SESSION['username'] ?? 'username');
 
 /* DELETE KATEGORI */
 if(isset($_GET['hapus'])){
     $kategori = mysqli_real_escape_string($connect, $_GET['hapus']);
     
-    // CEK apakah kategori masih dipakai di tabel alat_olahraga
+    // CEK apakah kategori masih dipakai
     $cek = mysqli_query($connect, "SELECT * FROM alat_olahraga WHERE kategori = '$kategori'");
     if(mysqli_num_rows($cek) > 0) {
-        echo "<script>alert('Kategori tidak bisa dihapus karena masih digunakan oleh alat olahraga!'); window.location.href='kategori.php';</script>";
+        header("Location: kategori.php?err=used");
         exit;
     }
     
     mysqli_query($connect, "DELETE FROM kategori_alat_olahraga WHERE kategori = '$kategori'");
-    header("Location: kategori.php");
+    tambahLog($_SESSION['id_user'], "Menghapus kategori alat: $kategori");
+    header("Location: kategori.php?msg=deleted");
     exit;
 }
 
@@ -46,771 +32,294 @@ if(isset($_POST['tambah'])){
     $kategori = trim(mysqli_real_escape_string($connect, $_POST['kategori']));
     
     if(empty($kategori)){
-        echo "<script>alert('Nama kategori tidak boleh kosong!'); window.location.href='kategori.php';</script>";
+        header("Location: kategori.php?err=empty");
         exit;
     }
     
     $cek = mysqli_query($connect, "SELECT * FROM kategori_alat_olahraga WHERE kategori = '$kategori'");
     if(mysqli_num_rows($cek) > 0){
-        echo "<script>alert('Kategori sudah ada!'); window.location.href='kategori.php';</script>";
+        header("Location: kategori.php?err=exists");
     } else {
         mysqli_query($connect, "INSERT INTO kategori_alat_olahraga (kategori) VALUES ('$kategori')");
-        echo "<script>alert('Kategori berhasil ditambahkan'); window.location.href='kategori.php';</script>";
+        tambahLog($_SESSION['id_user'], "Menambah kategori alat: $kategori");
+        header("Location: kategori.php?msg=added");
     }
     exit;
 }
 
-/* SEARCH */
+/* LOAD DATA */
+$keyword = $_GET['keyword'] ?? '';
+$query = "SELECT * FROM kategori_alat_olahraga";
+if($keyword !== '') {
+    $query .= " WHERE kategori LIKE '%$keyword%'";
+}
+$query .= " ORDER BY kategori ASC";
+$dataKategori = mysqli_query($connect, $query);
+
+/* AJAX Handler for Live Search */
 if(isset($_GET['ajax'])){
-    $keyword = mysqli_real_escape_string($connect, $_GET['keyword'] ?? '');
-
-    if($keyword !== ''){
-        $query = "SELECT * FROM kategori_alat_olahraga 
-        WHERE kategori LIKE '%$keyword%' 
-        ORDER BY kategori ASC";
-    } else {
-        $query = "SELECT * FROM kategori_alat_olahraga ORDER BY kategori ASC";
-    }
-
-    $data = mysqli_query($connect, $query);
-
-    if(mysqli_num_rows($data) > 0){
+    if(mysqli_num_rows($dataKategori) > 0){
         $no = 1;
-        while($row = mysqli_fetch_assoc($data)){
+        while($row = mysqli_fetch_assoc($dataKategori)){
             echo "
-            <tr>
-                <td>{$no}</td>
-                <td>" . htmlspecialchars($row['kategori']) . "</td>
-                <td>
-                    <div class='action-buttons'>
-                        <a href='editKategori.php?kategori=" . urlencode($row['kategori']) . "' class='btn-edit'><i class='fa-solid fa-pen'></i></a>
-                        <a href='?hapus=" . urlencode($row['kategori']) . "' class='btn-delete' onclick='return confirm(\"Yakin ingin menghapus kategori ini?\")'><i class='fa-solid fa-trash'></i></a>
+            <tr class='hover:bg-gray-50 transition-colors'>
+                <td class='px-6 py-4 text-[11px] font-bold text-gray-400'>".($no++)."</td>
+                <td class='px-6 py-4'>
+                    <span class='text-[12px] font-black text-popfit-dark uppercase tracking-tight'>".htmlspecialchars($row['kategori'])."</span>
+                </td>
+                <td class='px-6 py-4 text-right'>
+                    <div class='flex items-center justify-end space-x-2'>
+                        <a href='editKategori.php?kategori=".urlencode($row['kategori'])."' class='p-2 bg-white border border-popfit-border text-popfit-dark rounded-sm hover:bg-popfit-bg transition-colors' title='Edit'><i class='ph-bold ph-pencil-simple text-sm'></i></a>
+                        <a href='?hapus=".urlencode($row['kategori'])."' class='btn-hapus p-2 bg-white border border-popfit-border text-red-500 rounded-sm hover:bg-red-50 transition-colors' title='Hapus'><i class='ph-bold ph-trash text-sm'></i></a>
                     </div>
                 </td>
             </tr>
             ";
-            $no++;
         }
     } else {
-        echo "<tr>
-                <td colspan='3'>
-                    <div class='empty-state'>
-                        <i class='fa-solid fa-tags'></i>
-                        <p>Tidak ada kategori ditemukan</p>
-                    </div>
-                   \n
-                </td>
-               </tr>";
+        echo "<tr><td colspan='3' class='p-12 text-center text-popfit-textMuted uppercase font-black text-xs tracking-widest'>Data tidak ditemukan</td></tr>";
     }
     exit;
 }
-
-/* LOAD AWAL */
-$query = "SELECT * FROM kategori_alat_olahraga ORDER BY kategori ASC";
-$dataKategori = mysqli_query($connect, $query);
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kelola Kategori</title>
-
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Poppins', sans-serif;
-    background: #AFC2B2;
-}
-
-/* NAVBAR */
-.navbar {
-    background: #2F4A39;
-    padding: 12px 30px;
-    position: fixed;
-    width: 100%;
-    top: 0;
-    z-index: 1000;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.navbar img {
-    height: 45px;
-}
-
-.navbar .icons {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.navbar .icons i {
-    color: white;
-    font-size: 1.2rem;
-    cursor: pointer;
-}
-
-/* NOTIFICATION BADGE */
-.notif-wrapper {
-    position: relative;
-    display: inline-block;
-}
-
-/* PROFILE DROPDOWN */
-.profile-dropdown {
-    position: relative;
-}
-
-.profile-menu {
-    display: none;
-    position: absolute;
-    top: 40px;
-    right: 0;
-    background: #DFE8E2;
-    border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    text-align: center;
-    padding: 20px;
-    width: 220px;
-    z-index: 1001;
-}
-
-.profile-menu hr {
-    margin: 10px 0;
-}
-
-.profile-menu button {
-    background: #2F4A39;
-    border: none;
-    color: white;
-    padding: 8px 15px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    width: 100%;
-    transition: 0.3s;
-}
-
-.profile-menu button:hover {
-    background: #1f3727;
-}
-
-.profile-menu .admin-icon {
-    font-size: 2.5rem;
-    color: #2F4A39;
-    margin-bottom: 10px;
-}
-
-.profile-menu .admin-name {
-    font-weight: 600;
-    margin-bottom: 5px;
-    color: #2F4A39;
-}
-
-.profile-menu p {
-    font-size: 0.9rem;
-    color: #555;
-    margin-bottom: 10px;
-}
-
-/* SIDEBAR */
-.sidebar {
-    background: #2F4A39;
-    width: 230px;
-    min-height: 100vh;
-    padding-top: 80px;
-    position: fixed;
-    top: 0;
-    left: 0;
-}
-
-.sidebar a {
-    display: flex;
-    align-items: center;
-    color: white;
-    padding: 12px 20px;
-    margin: 6px 10px;
-    border-radius: 14px;
-    transition: 0.3s;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.sidebar a i {
-    margin-right: 12px;
-    width: 22px;
-}
-
-.sidebar a:hover {
-    background: #3f5a49;
-    transform: translateX(4px);
-}
-
-.sidebar a.active {
-    background: #3f5a49;
-}
-
-/* CONTENT */
-.content {
-    margin-left: 230px;
-    padding: 100px 30px 40px;
-}
-
-/* PAGE TITLE */
-.page-title {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.page-title h2 {
-    color: #2F4A39;
-    font-weight: 700;
-    font-size: 28px;
-    margin-bottom: 0;
-}
-
-/* SEARCH BOX */
-.search-wrapper {
-    margin-bottom: 25px;
-}
-
-.search-box {
-    background: white;
-    border-radius: 50px;
-    padding: 12px 22px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    border: 1px solid rgba(47,74,57,0.15);
-}
-
-.search-box:focus-within {
-    box-shadow: 0 4px 20px rgba(47,74,57,0.2);
-    border-color: #2F4A39;
-}
-
-.search-box i {
-    color: #2F4A39;
-    font-size: 1.1rem;
-}
-
-.search-box input {
-    border: none;
-    outline: none;
-    background: none;
-    width: 100%;
-    font-size: 14px;
-    font-family: 'Poppins', sans-serif;
-}
-
-.search-box input::placeholder {
-    color: #aaa;
-}
-
-/* TABLE */
-.table-wrapper {
-    background: #DFE8E2;
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-    overflow-x: auto;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    border-radius: 16px;
-    overflow: hidden;
-}
-
-.data-table thead tr {
-    background: #2F4A39;
-}
-
-.data-table thead th {
-    padding: 16px;
-    color: white;
-    font-weight: 600;
-    font-size: 14px;
-    text-align: center;
-}
-
-.data-table tbody tr {
-    background: white;
-}
-
-.data-table tbody tr:hover {
-    background: #f0f5f2;
-}
-
-.data-table tbody td {
-    padding: 14px;
-    text-align: center;
-    font-size: 14px;
-    color: #333;
-    border-bottom: 1px solid #e0ece4;
-}
-
-/* ACTION BUTTONS */
-.action-buttons {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-}
-
-.btn-edit {
-    background: #2F4A39;
-    color: white;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-}
-
-.btn-edit:hover {
-    background: #1f3727;
-    transform: translateY(-2px);
-}
-
-.btn-delete {
-    background: #5a8f6e;
-    color: white;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-}
-
-.btn-delete:hover {
-    background: #3d6b4e;
-    transform: translateY(-2px);
-}
-
-.empty-state {
-    text-align: center;
-    padding: 50px;
-    color: #777;
-}
-
-.empty-state i {
-    font-size: 50px;
-    color: #2F4A39;
-    opacity: 0.4;
-    margin-bottom: 15px;
-    display: block;
-}
-
-/* BOTTOM ACTIONS */
-.bottom-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
-    margin-top: 20px;
-    flex-wrap: wrap;
-}
-
-.btn-bottom {
-    flex: 1;
-    background: #1a3a2a;
-    color: white;
-    padding: 14px 0;
-    border-radius: 12px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: 0.3s;
-    text-align: center;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 15px;
-}
-
-.btn-bottom:hover {
-    background: #0f2a1e;
-    transform: translateY(-2px);
-    color: white;
-}
-
-.btn-bottom.kembali {
-    background: #2F4A39;
-}
-
-.btn-bottom.kembali:hover {
-    background: #1f3727;
-}
-
-/* MODAL TAMBAH KATEGORI */
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 2000;
-    justify-content: center;
-    align-items: center;
-}
-
-.modal-content {
-    background: #DFE8E2;
-    border-radius: 24px;
-    width: 90%;
-    max-width: 400px;
-    padding: 0;
-    animation: fadeIn 0.3s;
-    overflow: hidden;
-    box-shadow: 0 20px 35px -10px rgba(0,0,0,0.2);
-}
-
-.modal-header {
-    background: #2F4A39;
-    padding: 18px 25px;
-    text-align: center;
-    border-bottom: none;
-}
-
-.modal-header h3 {
-    color: white;
-    font-weight: 600;
-    margin: 0;
-    font-size: 20px;
-    letter-spacing: 0.5px;
-}
-
-.modal-body {
-    padding: 25px 25px 15px;
-}
-
-.modal-body input {
-    width: 100%;
-    padding: 14px 18px;
-    border: 2px solid #c5d5cc;
-    border-radius: 16px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 14px;
-    outline: none;
-    transition: 0.3s;
-    background: white;
-}
-
-.modal-body input:focus {
-    border-color: #2F4A39;
-    box-shadow: 0 0 0 3px rgba(47,74,57,0.15);
-}
-
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    padding: 0 25px 25px 25px;
-}
-
-.modal-footer button {
-    padding: 11px 24px;
-    border-radius: 40px;
-    border: none;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    transition: 0.3s;
-}
-
-.btn-simpan-modal {
-    background: #2F4A39;
-    color: white;
-    box-shadow: 0 2px 8px rgba(47,74,57,0.2);
-}
-
-.btn-simpan-modal:hover {
-    background: #1f3727;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(47,74,57,0.3);
-}
-
-.btn-batal-modal {
-    background: #c5d5cc;
-    color: #2F4A39;
-}
-
-.btn-batal-modal:hover {
-    background: #b5c5bc;
-    transform: translateY(-2px);
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@media (max-width: 992px) {
-    .sidebar {
-        position: relative;
-        width: 100%;
-        min-height: auto;
-        padding-top: 70px;
-    }
-    .content {
-        margin-left: 0;
-        padding-top: 20px;
-    }
-    .bottom-actions {
-        flex-direction: column;
-    }
-    .btn-bottom {
-        width: 100%;
-    }
-}
-
-.navbar .icons i.active {
-    color: #FFD166;
-}
-
-.navbar .icons i:hover {
-    color: #C7DBC9;
-    transition: 0.2s;
-}
-</style>
-</head>
-<body>
-
-<!-- NAVBAR -->
-<nav class="navbar d-flex justify-content-between align-items-center">
-    <img src="../../asset/logonav.png" alt="Logo">
-    <div class="icons">
-        <div class="notif-wrapper">
-            <a href="../notif.php" style="color:white;">
-                <i class="fa-solid fa-bell"></i>
-            </a>
-            <span id="notifBadge"
-                  style="position:absolute;top:-5px;right:-5px;
-                  background:red;color:white;
-                  font-size:11px;padding:3px 6px;
-                  border-radius:50%;display:none;">
-            </span>
-        </div>
-
-        <div class="profile-dropdown">
-            <i class="fa-solid fa-user" id="profileIcon"></i>
-            <div class="profile-menu" id="profileMenu">
-                <div class="admin-icon">
-                    <i class="fa-solid fa-user" style="font-size:2.5rem;color:#2F4A39;"></i>
-                </div>
-                <div class="admin-name"><?php echo $adminUsername; ?></div>
-                <hr>
-                <p>Akun Terverifikasi <i class="fa-solid fa-circle-check" style="color:#2F4A39"></i></p>
-                <button onclick="window.location.href='../logout.php'">Keluar</button>
-            </div>
-        </div>
-    </div>
-</nav>
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-    <a href="../dashboardAdmin.php"><i class="fa-solid fa-gauge-high"></i>Beranda</a>
-    <a href="../petugas/petugas.php"><i class="fa-solid fa-user-tie"></i>Petugas</a>
-    <a href="../siswa/siswa.php"><i class="fa-solid fa-users"></i>Siswa</a>
-    <a href="../alat/daftarAlat.php" class="active"><i class="fa-solid fa-volleyball"></i>Alat Olahraga</a>
-    <a href="../transaksi/transaksi.php"><i class="fa-solid fa-right-left"></i>Transaksi</a>
-    <a href="../denda/denda.php"><i class="fa-solid fa-wallet"></i>Denda</a>
-    <a href="../log/log.php"><i class="fa-solid fa-clock-rotate-left"></i>Log Aktivitas</a>
-    <a href="../laporan/laporan.php"><i class="fa-solid fa-chart-column"></i>Laporan</a>
-</div>
-
-<!-- CONTENT -->
-<div class="content">
-    <div class="page-title">
-        <h2>Kelola Kategori Alat Olahraga</h2>
-    </div>
-
-    <!-- SEARCH BOX -->
-    <div class="search-wrapper">
-        <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input 
-                type="text" 
-                id="searchInput" 
-                placeholder="Cari nama kategori..." 
-                autocomplete="off"
-            >
-        </div>
-    </div>
-
-    <!-- TABLE -->
-    <div class="table-wrapper">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th><i class="fa-solid fa-tags"></i> Nama Kategori</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody id="dataKategori">
-                <?php if(mysqli_num_rows($dataKategori) > 0): ?>
-                    <?php $no = 1; while($row = mysqli_fetch_assoc($dataKategori)): ?>
-                    <tr>
-                        <td><?= $no++ ?></td>
-                        <td><?= htmlspecialchars($row['kategori']) ?></td>
-                        <td class="action-buttons">
-                            <a href="editKategori.php?kategori=<?= urlencode($row['kategori']) ?>" class="btn-edit">
-                                <i class="fa-solid fa-pen"></i>
-                            </a>
-                            <a href="?hapus=<?= urlencode($row['kategori']) ?>" class="btn-delete" 
-                               onclick="return confirm('Yakin ingin menghapus kategori ini?')">
-                                <i class="fa-solid fa-trash"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="3">
-                            <div class="empty-state">
-                                <i class="fa-solid fa-tags"></i>
-                                <p>Belum ada kategori</p>
-                            </div>
-                        </td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- BOTTOM ACTIONS -->
-    <div class="bottom-actions">
-        <button class="btn-bottom" onclick="openModal()">
-            <i class="fa-solid fa-plus"></i> Tambah Kategori
-        </button>
-        <a href="daftarAlat.php" class="btn-bottom kembali">
-            <i class="fa-solid fa-arrow-left"></i> Kembali ke Daftar Alat Olahraga
-        </a>
-    </div>
-</div>
-
-<!-- MODAL TAMBAH KATEGORI -->
-<div id="modalTambah" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Tambah Kategori</h3>
-        </div>
-        <form method="POST">
-            <div class="modal-body">
-                <input type="text" name="kategori" placeholder="Nama kategori baru..." required autocomplete="off">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-batal-modal" onclick="closeModal()">Batal</button>
-                <button type="submit" name="tambah" class="btn-simpan-modal">Simpan</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-// MODAL
-const modal = document.getElementById('modalTambah');
-
-function openModal() {
-    modal.style.display = 'flex';
-}
-
-function closeModal() {
-    modal.style.display = 'none';
-}
-
-window.onclick = function(event) {
-    if (event.target == modal) {
-        closeModal();
-    }
-}
-
-// LIVE SEARCH
-const searchInput = document.getElementById('searchInput');
-const tbody = document.getElementById('dataKategori');
-let timeout = null;
-
-searchInput.addEventListener('keyup', function() {
-    clearTimeout(timeout);
-    
-    timeout = setTimeout(() => {
-        let keyword = this.value;
-        
-        fetch("kategori.php?ajax=1&keyword=" + encodeURIComponent(keyword) + "&t=" + Date.now())
-        .then(response => response.text())
-        .then(data => {
-            tbody.innerHTML = data;
-        })
-        .catch(error => console.log('Error:', error));
-    }, 300);
-});
-
-// Profile dropdown
-const profileIcon = document.getElementById('profileIcon');
-const profileMenu = document.getElementById('profileMenu');
-
-profileIcon.addEventListener('click', () => {
-    profileMenu.style.display = profileMenu.style.display === 'block' ? 'none' : 'block';
-});
-
-window.addEventListener('click', function(e){
-    if(!profileIcon.contains(e.target) && !profileMenu.contains(e.target)){
-        profileMenu.style.display = 'none';
-    }
-});
-
-// NOTIFIKASI
-const badge = document.getElementById("notifBadge");
-
-function loadNotif(){
-    fetch("../notif.php")
-    .then(res => res.json())
-    .then(data => {
-        if(data.length > 0){
-            badge.style.display = "block";
-            badge.textContent = data.length;
-        } else {
-            badge.style.display = "none";
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kategori Alat - PopFit Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        popfit: {
+                            dark: '#2A4736', light: '#3E614C', accent: '#F5C460', accentHover: '#E3B24F',
+                            bg: '#F4F4F5', surface: '#FFFFFF', border: '#E4E4E7', text: '#1F2937', textMuted: '#6B7280'
+                        }
+                    },
+                    borderRadius: { 'sm': '2px', DEFAULT: '4px' }
+                }
+            }
         }
-    })
-    .catch(err => {
-        console.log("Notif error:", err);
-        badge.style.display = "none";
-    });
-}
+    </script>
+    <style>
+        .nav-active { background-color: #3E614C; border-left: 4px solid #F5C460; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #E4E4E7; }
+        * { box-shadow: none !important; }
+        .sidebar { transition: transform 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-popfit-bg text-popfit-text font-sans h-screen overflow-hidden flex text-[13px]">
 
-loadNotif();
-setInterval(loadNotif, 10000);
-</script>
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0 z-50 sidebar -translate-x-full md:translate-x-0 md:static flex flex-col tracking-tight">
+        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark justify-between">
+            <div class="flex items-center">
+                <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
+                <span class="text-xl font-black tracking-wide uppercase">PopFit Admin</span>
+            </div>
+            <button id="closeSidebar" class="md:hidden text-gray-400 hover:text-white"><i class="ph ph-x text-2xl"></i></button>
+        </div>
 
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1">
+                <li><a href="../dashboardAdmin.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-squares-four text-xl w-6"></i><span class="ml-3 font-bold">Dashboard</span>
+                </a></li>
+                <li class="px-6 py-2 mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manajemen</li>
+                <li><a href="daftarAlat.php" class="nav-active flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-basketball text-xl w-6"></i><span class="ml-3 font-bold">Katalog Alat</span>
+                </a></li>
+                <li><a href="../petugas/petugas.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-user-tie text-xl w-6"></i><span class="ml-3 font-bold">Petugas</span>
+                </a></li>
+                <li><a href="../siswa/siswa.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-users text-xl w-6"></i><span class="ml-3 font-bold">Siswa</span>
+                </a></li>
+                <li class="px-6 py-2 mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sirkulasi</li>
+                <li><a href="../transaksi/transaksi.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-arrows-left-right text-xl w-6"></i><span class="ml-3 font-bold">Transaksi</span>
+                </a></li>
+                <li><a href="../denda/denda.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-wallet text-xl w-6"></i><span class="ml-3 font-bold">Denda</span>
+                </a></li>
+                <li><a href="../laporan/laporan.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
+                    <i class="ph ph-file-text text-xl w-6"></i><span class="ml-3 font-bold">Laporan</span>
+                </a></li>
+            </ul>
+        </nav>
+
+        <div class="border-t border-popfit-light p-4">
+            <div class="flex items-center w-full">
+                <div class="w-8 h-8 rounded-sm bg-popfit-accent flex items-center justify-center text-popfit-dark font-black">A</div>
+                <div class="ml-3 flex-1 overflow-hidden">
+                    <p class="text-[12px] font-black text-white truncate uppercase"><?= $adminName ?></p>
+                    <p class="text-[10px] text-gray-400 truncate uppercase"><?= $adminUsername ?></p>
+                </div>
+                <a href="../../logout.php" class="text-gray-400 hover:text-white transition-colors"><i class="ph ph-sign-out text-xl"></i></a>
+            </div>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col h-screen w-full relative">
+        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
+            <div class="flex items-center">
+                <button id="openSidebar" class="md:hidden mr-4 text-popfit-dark"><i class="ph ph-list text-2xl"></i></button>
+                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Kategori Alat</h2>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="daftarAlat.php" class="flex items-center text-popfit-textMuted hover:text-popfit-dark transition-all text-[10px] font-black uppercase tracking-widest border-r border-popfit-border pr-4 h-full">
+                    <i class="ph ph-arrow-left mr-2"></i> Kembali
+                </a>
+                <button onclick="toggleModal()" class="bg-popfit-dark text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-popfit-light transition-all flex items-center">
+                    <i class="ph ph-plus-bold mr-2"></i> Tambah Baru
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-6">
+            <div class="max-w-4xl mx-auto">
+                <!-- Search Bar -->
+                <div class="bg-white border border-popfit-border p-4 rounded-sm mb-6 flex items-center">
+                    <div class="relative flex-1">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="searchInput" placeholder="Cari kategori..." 
+                               class="w-full bg-popfit-bg border border-popfit-border rounded-sm pl-10 pr-4 py-2 text-[11px] font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-colors">
+                    </div>
+                </div>
+
+                <!-- Table View -->
+                <div class="bg-white border border-popfit-border rounded-sm overflow-hidden shadow-sm">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-popfit-bg border-b border-popfit-border">
+                                <th class="px-6 py-4 text-[10px] font-black text-popfit-textMuted uppercase tracking-widest w-16">No</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Nama Kategori</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-popfit-textMuted uppercase tracking-widest text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-gray-50">
+                            <?php if(mysqli_num_rows($dataKategori) > 0): $no=1; while($row = mysqli_fetch_assoc($dataKategori)): ?>
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 text-[11px] font-bold text-gray-400"><?= $no++ ?></td>
+                                <td class="px-6 py-4">
+                                    <span class="text-[12px] font-black text-popfit-dark uppercase tracking-tight"><?= htmlspecialchars($row['kategori']) ?></span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <a href="editKategori.php?kategori=<?= urlencode($row['kategori']) ?>" class="p-2 bg-white border border-popfit-border text-popfit-dark rounded-sm hover:bg-popfit-bg transition-colors" title="Edit"><i class="ph-bold ph-pencil-simple text-sm"></i></a>
+                                        <a href="?hapus=<?= urlencode($row['kategori']) ?>" class="btn-hapus p-2 bg-white border border-popfit-border text-red-500 rounded-sm hover:bg-red-50 transition-colors" title="Hapus"><i class="ph-bold ph-trash text-sm"></i></a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endwhile; else: ?>
+                            <tr><td colspan="3" class="p-12 text-center text-popfit-textMuted uppercase font-black text-xs tracking-widest">Data tidak ditemukan</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Tambah Overlay -->
+    <div id="modalTambah" class="fixed inset-0 bg-black/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm transition-all shadow-2xl">
+        <div class="bg-white rounded-sm w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div class="bg-popfit-dark px-6 py-4 flex items-center justify-between">
+                <h3 class="text-white text-[11px] font-black uppercase tracking-[0.2em] flex items-center">
+                    <i class="ph ph-tag-bold mr-3 text-popfit-accent"></i> Tambah Kategori Baru
+                </h3>
+                <button onclick="toggleModal()" class="text-white hover:text-popfit-accent transition-colors"><i class="ph ph-x-bold"></i></button>
+            </div>
+            <form method="POST" class="p-8 space-y-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-widest">Nama Kategori</label>
+                    <input type="text" name="kategori" required placeholder="CONTOH: BOLA, RAKET, DLL" class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-xs font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all uppercase placeholder:text-gray-300">
+                </div>
+                <div class="flex space-x-3">
+                    <button type="submit" name="tambah" class="flex-1 bg-popfit-dark text-white py-3 text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-popfit-light transition-all">Simpan</button>
+                    <button type="button" onclick="toggleModal()" class="px-6 py-3 bg-white border border-popfit-border text-popfit-dark text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-popfit-bg transition-all">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const openBtn = document.getElementById('openSidebar');
+        const closeBtn = document.getElementById('closeSidebar');
+        const modal = document.getElementById('modalTambah');
+        const searchInput = document.getElementById('searchInput');
+        const tableBody = document.getElementById('tableBody');
+
+        function toggleSidebar() { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
+        openBtn.addEventListener('click', toggleSidebar);
+        closeBtn.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+
+        function toggleModal() { modal.classList.toggle('hidden'); modal.classList.toggle('flex'); }
+
+        // Live Search
+        let timeout = null;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                fetch("kategori.php?ajax=1&keyword=" + encodeURIComponent(this.value))
+                    .then(res => res.text())
+                    .then(data => tableBody.innerHTML = data);
+            }, 300);
+        });
+
+        // Handle URL Messages/Errors
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.has('msg') || urlParams.has('err')) {
+            const msg = urlParams.get('msg');
+            const err = urlParams.get('err');
+            
+            let config = { icon: 'success', customClass: { popup: 'rounded-sm' } };
+            if (msg === 'added') config.title = 'BERHASIL DITAMBAH';
+            else if (msg === 'deleted') config.title = 'BERHASIL DIHAPUS';
+            else if (err === 'used') { config.icon = 'error'; config.title = 'GAGAL DIHAPUS'; config.text = 'Kategori masih digunakan alat lain!'; }
+            else if (err === 'exists') { config.icon = 'warning'; config.title = 'DUPLIKAT'; config.text = 'Kategori sudah ada!'; }
+            else if (err === 'empty') { config.icon = 'warning'; config.title = 'KOSONG'; config.text = 'Nama tidak boleh kosong!'; }
+
+            if(config.title) Swal.fire(config).then(() => {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            });
+        }
+
+        // Delete Alert
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.btn-hapus')) {
+                e.preventDefault();
+                const link = e.target.closest('.btn-hapus').href;
+                Swal.fire({
+                    title: 'HAPUS KATEGORI?',
+                    text: "Data yang dihapus tidak dapat dipulihkan!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#2A4736',
+                    cancelButtonColor: '#E4E4E7',
+                    confirmButtonText: 'YA, HAPUS!',
+                    cancelButtonText: 'BATAL',
+                    customClass: { popup: 'rounded-sm' }
+                }).then((res) => {
+                    if (res.isConfirmed) window.location.href = link;
+                });
+            }
+        });
+    </script>
 </body>
 </html>

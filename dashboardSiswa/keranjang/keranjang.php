@@ -11,26 +11,39 @@ $id_user = $_SESSION["id_user"];
 $siswaName = htmlspecialchars($_SESSION['nama'] ?? 'Siswa');
 $siswaUsername = htmlspecialchars($_SESSION['username'] ?? 'username');
 
-/* HANDLE ACTION */
 if(isset($_POST['checkout'])){
     $waktu_pinjam = $_POST['waktu_pinjam'];
     $batas_kembali = $_POST['batas_kembali'];
     
-    $bukti_kartu = null;
-    if(isset($_FILES['bukti_kartu']) && $_FILES['bukti_kartu']['error'] === 0){
-        $ext = pathinfo($_FILES['bukti_kartu']['name'], PATHINFO_EXTENSION);
-        $nama_file = "kartu_" . time() . "_" . rand(1000, 9999) . "." . $ext;
-        if(move_uploaded_file($_FILES['bukti_kartu']['tmp_name'], "../../uploads/" . $nama_file)){
-            $bukti_kartu = $nama_file;
-        }
-    }
-
-    $result = checkoutKeranjang($id_user, $waktu_pinjam, $batas_kembali, $bukti_kartu);
-    if(isset($result['success'])){
-        echo "<script>alert('Peminjaman berhasil diajukan! Silakan tunggu konfirmasi petugas.'); window.location='../transaksi/transaksi.php';</script>";
-        exit;
+    // VALIDASI STATUS SISWA
+    $cekStatus = canUserBorrow($id_user);
+    if(isset($cekStatus['error'])){
+        $error = $cekStatus['error'];
     } else {
-        $error = $result['error'];
+        // VALIDASI DURASI
+        $cekDurasi = validateDuration($waktu_pinjam, $batas_kembali);
+        if(isset($cekDurasi['error'])){
+            $error = $cekDurasi['error'];
+        } else {
+            // HANDLE UPLOAD KARTU
+            $bukti_kartu = "";
+            if($_FILES['bukti_kartu']['error'] === 0){
+                $namaFile = $_FILES['bukti_kartu']['name'];
+                $tmpName = $_FILES['bukti_kartu']['tmp_name'];
+                $ext = pathinfo($namaFile, PATHINFO_EXTENSION);
+                $newName = "kartu_" . rand(1000, 9999) . "_" . rand(1000, 9999) . "." . $ext;
+                move_uploaded_file($tmpName, "../../uploads/" . $newName);
+                $bukti_kartu = $newName;
+            }
+
+            $result = checkoutKeranjang($id_user, $waktu_pinjam, $batas_kembali, $bukti_kartu);
+            if(isset($result['success'])){
+                echo "<script>alert('Peminjaman berhasil diajukan! Silakan tunggu konfirmasi petugas.'); window.location='../transaksi/transaksi.php';</script>";
+                exit;
+            } else {
+                $error = $result['error'];
+            }
+        }
     }
 }
 
@@ -79,64 +92,24 @@ $keranjang = queryReadData("SELECT k.*, a.nama_alat_olahraga, a.foto_alat_olahra
 
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
 
-    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0 z-50 sidebar -translate-x-full md:translate-x-0 md:static flex flex-col">
-        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark justify-between">
-            <div class="flex items-center">
-                <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
-                <span class="text-xl font-black tracking-wide uppercase">PopFit</span>
-            </div>
-            <button id="closeSidebar" class="md:hidden text-2xl"><i class="ph ph-x"></i></button>
-        </div>
-
-        <nav class="flex-1 overflow-y-auto pt-6">
-            <ul class="space-y-1">
-                <li class="px-6 py-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Main Menu</li>
-                <li><a href="../dashboardSiswa.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-squares-four text-xl w-6"></i><span class="ml-3 font-bold">Beranda</span>
-                </a></li>
-                <li class="px-6 py-2 mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Peminjaman</li>
-                <li><a href="../alat/daftarAlat.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-magnifying-glass text-xl w-6"></i><span class="ml-3 font-bold">Cari Alat</span>
-                </a></li>
-                <li><a href="keranjang.php" class="flex items-center px-6 py-3 text-white transition-colors border-l-4 border-popfit-accent nav-active">
-                    <i class="ph-fill ph-shopping-cart text-xl w-6"></i><span class="ml-3 font-bold">Keranjang</span>
-                </a></li>
-                <li><a href="../transaksi/transaksi.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-arrows-left-right text-xl w-6"></i><span class="ml-3 font-bold">Transaksi</span>
-                </a></li>
-                <li><a href="../denda/denda.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-wallet text-xl w-6"></i><span class="ml-3 font-bold">Denda</span>
-                </a></li>
-                <li><a href="../riwayat/riwayat.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-clock-counter-clockwise text-xl w-6"></i><span class="ml-3 font-bold">Riwayat</span>
-                </a></li>
-            </ul>
-        </nav>
-
-        <div class="p-6 border-t border-popfit-light">
-            <div class="flex items-center bg-popfit-light/30 p-3 rounded-sm">
-                <div class="w-8 h-8 rounded-sm bg-popfit-accent flex items-center justify-center text-popfit-dark font-black text-xs"><?= substr($siswaName, 0, 1) ?></div>
-                <div class="ml-3 flex-1 overflow-hidden">
-                    <p class="text-[12px] font-black text-white truncate uppercase"><?= $siswaName ?></p>
-                    <p class="text-[10px] text-gray-400 truncate uppercase">Siswa</p>
-                </div>
-                <a href="../logout.php" class="text-gray-400 hover:text-white"><i class="ph-bold ph-sign-out text-xl"></i></a>
-            </div>
-        </div>
-    </aside>
+    <?php 
+        $rel = "../"; 
+        $activeIndex = "keranjang"; 
+        include '../../layout/sidebar_siswa.php'; 
+    ?>
 
     <div class="flex-1 flex flex-col h-screen w-full relative">
-        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
-            <div class="flex items-center">
-                <button id="openSidebar" class="md:hidden mr-4 text-2xl"><i class="ph ph-list"></i></button>
-                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Keranjang Anda</h2>
-            </div>
-            <div class="flex items-center space-x-4">
-                <a href="../notif.php" class="p-2 bg-popfit-bg text-popfit-dark rounded-sm hover:bg-popfit-border transition-colors"><i class="ph-bold ph-bell text-xl"></i></a>
-            </div>
-        </header>
+        <?php 
+            $pageTitle = "Keranjang Anda"; 
+            include '../../layout/header_siswa.php'; 
+        ?>
 
         <main class="flex-1 overflow-y-auto p-6">
+            <?php if(isset($error)): ?>
+                <div class="max-w-4xl mx-auto mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-[11px] font-bold uppercase tracking-tight flex items-center rounded-sm">
+                    <i class="ph-fill ph-warning-circle text-xl mr-3"></i> <?= $error ?>
+                </div>
+            <?php endif; ?>
             <div class="max-w-4xl mx-auto flex flex-col lg:flex-row gap-6">
                 
                 <!-- ITEMS LIST -->
@@ -181,8 +154,8 @@ $keranjang = queryReadData("SELECT k.*, a.nama_alat_olahraga, a.foto_alat_olahra
                                        class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-[11px] font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all">
                             </div>
                             <div class="space-y-2">
-                                <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-[0.2em]">Batas Kembali</label>
-                                <input type="datetime-local" name="batas_kembali" required value="<?= date('Y-m-d\TH:i', strtotime('+3 days')) ?>" 
+                                <label class="text-[10px] font-black text-popfit-textMuted uppercase tracking-[0.2em]">Batas Kembali (Max 5 Jam)</label>
+                                <input type="datetime-local" name="batas_kembali" required value="<?= date('Y-m-d\TH:i', strtotime('+5 hours')) ?>" 
                                        class="w-full bg-popfit-bg border border-popfit-border rounded-sm px-4 py-3 text-[11px] font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all">
                             </div>
                             <div class="space-y-2 pt-2 pb-2">

@@ -34,6 +34,21 @@ if (isset($_POST['bayar'])) {
     echo "<script>alert('Pembayaran denda diterima!'); window.location='detailDenda.php?id=$idTransaksi';</script>";
     exit;
 }
+
+if (isset($_POST['approve_pembayaran'])) {
+    mysqli_query($connect, "UPDATE transaksi SET pembayaran = 'lunas', alasan_penolakan = NULL WHERE id_transaksi = $idTransaksi");
+    tambahLog($_SESSION['id_user'], "Petugas Menyetujui bukti pembayaran denda ID: $idTransaksi");
+    echo "<script>alert('Pembayaran Disetujui!'); window.location='detailDenda.php?id=$idTransaksi';</script>";
+    exit;
+}
+
+if (isset($_POST['reject_pembayaran'])) {
+    $alasan = mysqli_real_escape_string($connect, $_POST['alasan_penolakan']);
+    mysqli_query($connect, "UPDATE transaksi SET pembayaran = 'ditolak', alasan_penolakan = '$alasan' WHERE id_transaksi = $idTransaksi");
+    tambahLog($_SESSION['id_user'], "Petugas Menolak bukti pembayaran denda ID: $idTransaksi. Alasan: $alasan");
+    echo "<script>alert('Pembayaran Ditolak!'); window.location='detailDenda.php?id=$idTransaksi';</script>";
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -69,15 +84,21 @@ if (isset($_POST['bayar'])) {
         .nav-active { background-color: #3E614C; border-left: 4px solid #F5C460; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #E4E4E7; }
+        .sidebar { transition: transform 0.3s ease-in-out; }
     </style>
 </head>
-<body class="bg-popfit-bg text-popfit-text font-sans h-screen overflow-hidden flex">
+<body class="bg-popfit-bg text-popfit-text font-sans h-screen overflow-hidden flex text-[13px]">
+
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
 
     <!-- DESKTOP SIDEBAR -->
-    <aside class="hidden md:flex flex-col w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0">
-        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark">
-            <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
-            <span class="text-xl font-bold tracking-wide">PopFit Petugas</span>
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0 z-50 sidebar -translate-x-full md:translate-x-0 md:static flex flex-col">
+        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark justify-between">
+            <div class="flex items-center">
+                <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
+                <span class="text-xl font-bold tracking-wide">PopFit Petugas</span>
+            </div>
+            <button id="closeSidebar" class="md:hidden text-gray-400 hover:text-white"><i class="ph ph-x text-2xl"></i></button>
         </div>
 
         <nav class="flex-1 overflow-y-auto py-4">
@@ -112,8 +133,9 @@ if (isset($_POST['bayar'])) {
 
     <!-- MAIN CONTENT -->
     <div class="flex-1 flex flex-col h-screen w-full relative">
-        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
+        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0 text-[13px]">
             <div class="flex items-center space-x-4">
+                <button id="openSidebar" class="md:hidden text-popfit-dark"><i class="ph ph-list text-2xl"></i></button>
                 <a href="denda.php" class="text-popfit-textMuted hover:text-popfit-dark"><i class="ph ph-arrow-left text-xl"></i></a>
                 <h2 class="text-lg font-bold text-popfit-dark">Detail Denda #<?= $idTransaksi ?></h2>
             </div>
@@ -159,6 +181,26 @@ if (isset($_POST['bayar'])) {
                                 <p class="text-[10px] uppercase font-black text-popfit-textMuted tracking-tighter mb-1">Waktu Kembali</p>
                                 <p class="text-sm font-bold text-popfit-dark"><?= $trx['waktu_kembali'] ? date('d M Y, H:i', strtotime($trx['waktu_kembali'])) : 'BELUM KEMBALI' ?></p>
                             </div>
+                            <?php if($trx['keterlambatan'] == 'ya'): 
+                                $det = cekDetailKeterlambatan($trx['batas_kembali'], $trx['waktu_kembali']);    
+                            ?>
+                            <div class="col-span-1 md:col-span-2 p-4 bg-red-50 border border-red-100 rounded-sm">
+                                <p class="text-[10px] uppercase font-black text-red-600 tracking-widest mb-1 flex items-center">
+                                    <i class="ph ph-clock-countdown text-lg mr-2"></i> Keterangan Keterlambatan
+                                </p>
+                                <p class="text-sm font-black text-red-700 uppercase leading-none">Terlambat: <?= $det['teks'] ?></p>
+                                <p class="text-[10px] font-bold text-red-500 uppercase mt-1">Denda Keterlambatan: Rp <?= number_format($det['denda'], 0, ',', '.') ?></p>
+                            </div>
+                            <?php endif; ?>
+                            <?php if($trx['denda_kerusakan'] > 0): ?>
+                            <div class="col-span-1 md:col-span-2 p-4 bg-orange-50 border border-orange-100 rounded-sm">
+                                <p class="text-[10px] uppercase font-black text-orange-600 tracking-widest mb-1 flex items-center">
+                                    <i class="ph ph-wrench text-lg mr-2"></i> Denda Kerusakan
+                                </p>
+                                <p class="text-sm font-black text-orange-700 uppercase leading-none">Jumlah: Rp <?= number_format($trx['denda_kerusakan'], 0, ',', '.') ?></p>
+                                <p class="text-[10px] font-bold text-orange-500 uppercase mt-1">Catatan Kondisi: <?= htmlspecialchars($trx['kondisi'] ?: '-') ?></p>
+                            </div>
+                            <?php endif; ?>
                             <div>
                                 <p class="text-[10px] uppercase font-black text-popfit-textMuted tracking-tighter mb-1">Kontak Siswa</p>
                                 <p class="text-sm font-bold text-popfit-dark"><?= $trx['no_telp'] ?></p>
@@ -182,7 +224,66 @@ if (isset($_POST['bayar'])) {
 
                         <div class="h-px bg-gray-100 mb-8"></div>
 
-                        <?php if($trx['pembayaran'] != 'lunas'): ?>
+                        <?php if($trx['pembayaran'] == 'pending'): ?>
+                            <div class="p-4 bg-popfit-accent/10 border border-popfit-accent/20 rounded-sm text-left">
+                                <h5 class="text-[10px] font-black text-popfit-dark uppercase mb-4 flex items-center">
+                                    <i class="ph-fill ph-warning-circle text-popfit-accent mr-2"></i> Verifikasi Siswa
+                                </h5>
+                                
+                                <div class="grid grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Metode:</p>
+                                        <p class="text-xs font-black text-popfit-dark uppercase"><?= $trx['metode_pembayaran_denda'] ?></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Pengirim:</p>
+                                        <p class="text-xs font-black text-popfit-dark uppercase"><?= $trx['nama_pengirim_pembayaran'] ?: '-' ?></p>
+                                    </div>
+                                </div>
+
+                                <?php if($trx['catatan_pembayaran']): ?>
+                                <div class="mb-6">
+                                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Catatan Siswa:</p>
+                                    <p class="text-xs font-bold text-popfit-dark italic">"<?= htmlspecialchars($trx['catatan_pembayaran']) ?>"</p>
+                                </div>
+                                <?php endif; ?>
+
+                                <div class="mb-6">
+                                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Bukti:</p>
+                                    <a href="../../uploads/<?= $trx['bukti_pembayaran'] ?>" target="_blank" class="block group relative overflow-hidden rounded-sm border border-popfit-border">
+                                        <img src="../../uploads/<?= $trx['bukti_pembayaran'] ?>" class="w-full h-48 object-cover group-hover:scale-110 transition-transform">
+                                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-black uppercase">Lihat Full</div>
+                                    </a>
+                                </div>
+
+                                <div id="verifyActions">
+                                    <div class="flex gap-2 mb-4">
+                                        <form method="POST" class="flex-1">
+                                            <button type="submit" name="approve_pembayaran" class="w-full bg-popfit-dark text-white py-3 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-popfit-light transition-all flex items-center justify-center" onclick="return confirm('Terima pembayaran denda ini?')">
+                                                <i class="ph-bold ph-check mr-2"></i> Terima
+                                            </button>
+                                        </form>
+                                        <button type="button" onclick="showRejectForm()" class="flex-1 bg-white border border-red-500 text-red-500 py-3 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center justify-center">
+                                            <i class="ph-bold ph-x mr-2"></i> Tolak
+                                        </button>
+                                    </div>
+
+                                    <form method="POST" id="rejectForm" class="hidden animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-4 border-t border-popfit-accent/20">
+                                        <p class="text-[10px] font-black text-red-600 uppercase">Alasan Penolakan:</p>
+                                        <textarea name="alasan_penolakan" required placeholder="MISAL: BUKTI TIDAK JELAS" class="w-full bg-white border border-red-200 rounded-sm px-3 py-2 text-[11px] font-bold text-popfit-dark focus:border-red-500 outline-none transition-all uppercase"></textarea>
+                                        <div class="flex gap-2">
+                                            <button type="submit" name="reject_pembayaran" class="flex-1 bg-red-600 text-white py-2 rounded-sm text-[9px] font-black uppercase tracking-widest hover:bg-red-700 transition-all">Konfirmasi</button>
+                                            <button type="button" onclick="hideRejectForm()" class="px-4 py-2 text-[9px] font-black uppercase text-gray-400">Batal</button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <script>
+                                    function showRejectForm() { document.getElementById('rejectForm').classList.remove('hidden'); }
+                                    function hideRejectForm() { document.getElementById('rejectForm').classList.add('hidden'); }
+                                </script>
+                            </div>
+                        <?php elseif($trx['pembayaran'] == 'belum bayar'): ?>
                             <form method="POST">
                                 <button type="submit" name="bayar" class="w-full bg-popfit-dark text-white rounded-sm py-4 text-xs font-black uppercase tracking-widest hover:bg-popfit-light transition-all mb-4" onclick="return confirm('Sudah menerima pembayaran sebesar Rp <?= number_format($trx['denda'], 0, ',', '.') ?>?')">
                                     Konfirmasi Pembayaran
@@ -202,5 +303,15 @@ if (isset($_POST['bayar'])) {
         </main>
     </div>
 
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const openBtn = document.getElementById('openSidebar');
+        const closeBtn = document.getElementById('closeSidebar');
+        function toggleSidebar() { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
+        openBtn.addEventListener('click', toggleSidebar);
+        closeBtn.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+    </script>
 </body>
 </html>
