@@ -31,8 +31,8 @@ if(isset($_GET['ajax'])){
                 <td class='px-6 py-4 hidden md:table-cell text-[11px] font-bold text-popfit-dark'>" . htmlspecialchars($row['no_telp'] ?? '-') . "</td>
                 <td class='px-6 py-4 text-right'>
                     <div class='flex items-center justify-end space-x-2'>
-                        <a href='editPetugas.php?id=" . $row['id_user'] . "' class='w-8 h-8 flex items-center justify-center bg-white border border-popfit-border text-popfit-dark rounded-sm hover:bg-popfit-bg transition-colors' title='Edit'><i class='ph ph-pencil-simple-bold'></i></a>
-                        <a href='?hapus=" . $row['id_user'] . "' class='btn-hapus w-8 h-8 flex items-center justify-center bg-white border border-popfit-border text-red-500 rounded-sm hover:bg-red-50 transition-colors' title='Hapus'><i class='ph ph-trash-bold'></i></a>
+                        <a href='editPetugas.php?id=" . $row['id_user'] . "' class='w-8 h-8 flex items-center justify-center bg-white border border-popfit-border text-popfit-dark rounded-sm hover:bg-popfit-bg transition-colors' title='Edit'><i class='ph-bold ph-pencil-simple'></i></a>
+                        <a href='?hapus=" . $row['id_user'] . "' class='btn-hapus w-8 h-8 flex items-center justify-center bg-white border border-popfit-border text-red-500 rounded-sm hover:bg-red-50 transition-colors' title='Hapus'><i class='ph-bold ph-trash'></i></a>
                     </div>
                 </td>
             </tr>";
