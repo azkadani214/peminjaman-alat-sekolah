@@ -31,7 +31,7 @@ if(isset($_POST["login"])) {
             // Map selected role to database roles
             $isValidRole = false;
             if($selectedRole == "admin" && ($actualRole == "admin" || $actualRole == "admin utama")) $isValidRole = true;
-            if($selectedRole == "staff" && $actualRole == "petugas") $isValidRole = true;
+            if($selectedRole == "petugas" && $actualRole == "petugas") $isValidRole = true;
             if($selectedRole == "siswa" && $actualRole == "siswa") $isValidRole = true;
 
             if(!$isValidRole){
