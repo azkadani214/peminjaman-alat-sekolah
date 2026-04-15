@@ -14,15 +14,19 @@ $siswaUsername = htmlspecialchars($_SESSION['username'] ?? 'username');
 if(isset($_POST['checkout'])){
     $waktu_pinjam = $_POST['waktu_pinjam'];
     $batas_kembali = $_POST['batas_kembali'];
-    
-    // VALIDASI STATUS SISWA
-    $cekStatus = canUserBorrow($id_user);
-    if(isset($cekStatus['error'])){
-        $error = $cekStatus['error'];
+
+    // REQUIREMENT: Check Operational Hour (Checkout Submission)
+    if(!isOperationalHour()){
+        $error = "Peminjaman hanya dapat diajukan pada jam operasional sekolah (06.45 - 17.00).";
     } else {
-        // VALIDASI DURASI
-        $cekDurasi = validateDuration($waktu_pinjam, $batas_kembali);
-        if(isset($cekDurasi['error'])){
+        // VALIDASI STATUS SISWA
+        $cekStatus = canUserBorrow($id_user);
+        if(isset($cekStatus['error'])){
+            $error = $cekStatus['error'];
+        } else {
+            // VALIDASI DURASI
+            $cekDurasi = validateDuration($waktu_pinjam, $batas_kembali);
+            if(isset($cekDurasi['error'])){
             $error = $cekDurasi['error'];
         } else {
             // HANDLE UPLOAD KARTU
@@ -38,7 +42,13 @@ if(isset($_POST['checkout'])){
 
             $result = checkoutKeranjang($id_user, $waktu_pinjam, $batas_kembali, $bukti_kartu);
             if(isset($result['success'])){
-                echo "<script>alert('Peminjaman berhasil diajukan! Silakan tunggu konfirmasi petugas.'); window.location='../transaksi/transaksi.php';</script>";
+                $_SESSION['swal'] = [
+                    'title' => 'BERHASIL!',
+                    'text' => 'Peminjaman berhasil diajukan! Silakan tunggu konfirmasi petugas.',
+                    'icon' => 'success',
+                    'redirect' => '../transaksi/transaksi.php'
+                ];
+                header("Location: keranjang.php");
                 exit;
             } else {
                 $error = $result['error'];
@@ -182,6 +192,7 @@ $keranjang = queryReadData("SELECT k.*, a.nama_alat_olahraga, a.foto_alat_olahra
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -200,6 +211,29 @@ $keranjang = queryReadData("SELECT k.*, a.nama_alat_olahraga, a.foto_alat_olahra
                 if(this.files.length > 0) fileName.textContent = this.files[0].name;
             };
         }
+
+        <?php if(isset($_SESSION['swal'])): ?>
+            Swal.fire({
+                title: '<?= $_SESSION['swal']['title'] ?>',
+                text: '<?= $_SESSION['swal']['text'] ?>',
+                icon: '<?= $_SESSION['swal']['icon'] ?>',
+                confirmButtonColor: '#2A4736',
+            }).then(() => {
+                <?php if(isset($_SESSION['swal']['redirect'])): ?>
+                    window.location.href = '<?= $_SESSION['swal']['redirect'] ?>';
+                <?php endif; ?>
+            });
+            <?php unset($_SESSION['swal']); ?>
+        <?php endif; ?>
+
+        <?php if(isset($error)): ?>
+            Swal.fire({
+                title: 'GAGAL!',
+                text: '<?= $error ?>',
+                icon: 'error',
+                confirmButtonColor: '#2A4736',
+            });
+        <?php endif; ?>
     </script>
 </body>
 </html>

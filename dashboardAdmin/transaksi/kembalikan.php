@@ -44,7 +44,6 @@ if (isset($_POST['submit_kembali'])) {
                 waktu_kembali = '$waktu_kembali_input',
                 kondisi = '$kondisi',
                 denda = $total_denda,
-                denda_kerusakan = $denda_kerusakan,
                 keterlambatan = '$keterlambatan',
                 id_petugas = $id_petugas,
                 pembayaran = 'belum bayar'
@@ -58,9 +57,14 @@ if (isset($_POST['submit_kembali'])) {
             $qty = $item['jumlah'];
             mysqli_query($connect, "UPDATE alat_olahraga SET stok = stok + $qty WHERE id_alat_olahraga = '$id_alat'");
         }
-
-        tambahLog($id_petugas, "Memproses pengembalian transaksi #$id_transaksi (Denda: Rp $total_denda)");
-        header("Location: transaksi.php?msg=kembali_success&denda=$total_denda");
+        tambahLog($id_petugas, "Memproses pengembalian transaksi #$id_transaksi. Kondisi: $kondisi. Denda: Rp$total_denda");
+        $_SESSION['swal'] = [
+            'title' => 'BERHASIL!',
+            'text' => 'Pengembalian alat telah dikonfirmasi.',
+            'icon' => 'success',
+            'redirect' => 'transaksi.php'
+        ];
+        header("Location: kembalikan.php?id=$id_transaksi");
         exit;
     } else {
         $error = "Terjadi kesalahan saat memproses data.";
@@ -150,6 +154,7 @@ if (isset($_POST['submit_kembali'])) {
             </div>
         </form>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const tglInput = document.querySelector('input[name="tgl_kembali"]');
         const jamInput = document.querySelector('input[name="jam_kembali"]');
@@ -188,7 +193,20 @@ if (isset($_POST['submit_kembali'])) {
         tglInput.addEventListener('change', updateDelayInfo);
         jamInput.addEventListener('change', updateDelayInfo);
         updateDelayInfo();
-    </script>
 
+        <?php if(isset($_SESSION['swal'])): ?>
+            Swal.fire({
+                title: '<?= $_SESSION['swal']['title'] ?>',
+                text: '<?= $_SESSION['swal']['text'] ?>',
+                icon: '<?= $_SESSION['swal']['icon'] ?>',
+                confirmButtonColor: '#2A4736',
+            }).then(() => {
+                <?php if(isset($_SESSION['swal']['redirect'])): ?>
+                    window.location.href = '<?= $_SESSION['swal']['redirect'] ?>';
+                <?php endif; ?>
+            });
+            <?php unset($_SESSION['swal']); ?>
+        <?php endif; ?>
+    </script>
 </body>
 </html>

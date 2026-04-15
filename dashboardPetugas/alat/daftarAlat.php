@@ -93,12 +93,10 @@ $dataAlat = mysqli_query($connect, "SELECT * FROM alat_olahraga ORDER BY id_alat
     ?>
 
     <div class="flex-1 flex flex-col h-screen w-full relative">
-        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
-            <div class="flex items-center space-x-4">
-                <button id="openSidebar" class="md:hidden text-popfit-dark"><i class="ph ph-list text-2xl"></i></button>
-                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Stok Alat</h2>
-            </div>
-        </header>
+        <?php 
+            $pageTitle = "Stok Alat"; 
+            include '../../layout/header_petugas.php'; 
+        ?>
 
         <main class="flex-1 overflow-y-auto p-6">
             <div class="bg-white border border-popfit-border rounded-sm p-4 mb-6 flex items-center">

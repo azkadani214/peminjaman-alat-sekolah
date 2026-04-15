@@ -8,6 +8,10 @@ $activeIndex = $activeIndex ?? '';
 function isActive($current, $target) {
     return $current === $target ? 'nav-active' : '';
 }
+
+// Logic for Badges
+$countPeminjaman = mysqli_fetch_assoc(mysqli_query($connect, "SELECT COUNT(*) as total FROM transaksi WHERE status = 'menunggu'"))['total'] ?? 0;
+$countBayar = mysqli_fetch_assoc(mysqli_query($connect, "SELECT COUNT(*) as total FROM transaksi WHERE pembayaran = 'pending'"))['total'] ?? 0;
 ?>
 <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0 z-50 sidebar -translate-x-full md:translate-x-0 md:static flex flex-col">
     <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark justify-between">
@@ -29,9 +33,15 @@ function isActive($current, $target) {
             </a></li>
             <li><a href="<?= $rel ?>transaksi/transaksi.php" class="<?= isActive($activeIndex, 'transaksi') ?> flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent justify-between">
                 <div class="flex items-center"><i class="ph ph-arrows-left-right text-xl w-6"></i><span class="ml-3 font-bold">Transaksi</span></div>
+                <?php if($countPeminjaman > 0): ?>
+                <span class="bg-popfit-accent text-popfit-dark text-[10px] font-black px-1.5 py-0.5 rounded-sm"><?= $countPeminjaman ?></span>
+                <?php endif; ?>
             </a></li>
-            <li><a href="<?= $rel ?>denda/denda.php" class="<?= isActive($activeIndex, 'denda') ?> flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                <i class="ph ph-wallet text-xl w-6"></i><span class="ml-3 font-bold">Denda</span>
+            <li><a href="<?= $rel ?>denda/denda.php" class="<?= isActive($activeIndex, 'denda') ?> flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent justify-between">
+                <div class="flex items-center"><i class="ph ph-wallet text-xl w-6"></i><span class="ml-3 font-bold">Denda</span></div>
+                <?php if($countBayar > 0): ?>
+                <span class="bg-popfit-accent text-popfit-dark text-[10px] font-black px-1.5 py-0.5 rounded-sm"><?= $countBayar ?></span>
+                <?php endif; ?>
             </a></li>
             <li><a href="<?= $rel ?>notif.php" class="<?= isActive($activeIndex, 'notif') ?> flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
                 <i class="ph ph-bell text-xl w-6"></i><span class="ml-3 font-bold">Notifikasi</span>

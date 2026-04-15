@@ -32,12 +32,21 @@ if(isset($_GET['reject'])){
 
 /* FETCH TRANSACTIONS */
 $filterStatus = $_GET['status'] ?? '';
+$keyword = $_GET['keyword'] ?? '';
+
 $query = "SELECT t.*, u.nama, u.nis, u.kelas 
           FROM transaksi t 
           JOIN users u ON t.id_user = u.id_user";
-if($filterStatus) $query .= " WHERE t.status = '$filterStatus'";
-$query .= " ORDER BY t.waktu_pinjam DESC";
 
+$conditions = [];
+if($filterStatus) $conditions[] = "t.status = '$filterStatus'";
+if($keyword) $conditions[] = "(u.nama LIKE '%$keyword%' OR u.nis LIKE '%$keyword%')";
+
+if(!empty($conditions)) {
+    $query .= " WHERE " . implode(" AND ", $conditions);
+}
+
+$query .= " ORDER BY t.waktu_pinjam DESC";
 $result = mysqli_query($connect, $query);
 ?>
 <!DOCTYPE html>
@@ -80,68 +89,31 @@ $result = mysqli_query($connect, $query);
 
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
 
-    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0 z-50 sidebar -translate-x-full md:translate-x-0 md:static flex flex-col">
-        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark justify-between">
-            <div class="flex items-center">
-                <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
-                <span class="text-xl font-black tracking-wide uppercase">PopFit Admin</span>
-            </div>
-            <button id="closeSidebar" class="md:hidden text-gray-400 hover:text-white"><i class="ph ph-x text-2xl"></i></button>
-        </div>
-
-        <nav class="flex-1 overflow-y-auto py-4">
-            <ul class="space-y-1">
-                <li><a href="../dashboardAdmin.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-squares-four text-xl w-6"></i><span class="ml-3 font-bold">Dashboard</span>
-                </a></li>
-                <li class="px-6 py-2 mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Manajemen</li>
-                <li><a href="../alat/daftarAlat.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-basketball text-xl w-6"></i><span class="ml-3 font-bold">Katalog Alat</span>
-                </a></li>
-                <li><a href="../petugas/petugas.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-user-tie text-xl w-6"></i><span class="ml-3 font-bold">Petugas</span>
-                </a></li>
-                <li><a href="../siswa/siswa.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-users text-xl w-6"></i><span class="ml-3 font-bold">Siswa</span>
-                </a></li>
-                <li class="px-6 py-2 mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sirkulasi</li>
-                <li><a href="transaksi.php" class="nav-active flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-arrows-left-right text-xl w-6"></i><span class="ml-3 font-bold">Transaksi</span>
-                </a></li>
-                <li><a href="../denda/denda.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-wallet text-xl w-6"></i><span class="ml-3 font-bold">Denda</span>
-                </a></li>
-                <li><a href="../laporan/laporan.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-file-text text-xl w-6"></i><span class="ml-3 font-bold">Laporan</span>
-                </a></li>
-                <li><a href="../log/log.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent">
-                    <i class="ph ph-scroll text-xl w-6"></i><span class="ml-3 font-bold">Log Aktivitas</span>
-                </a></li>
-            </ul>
-        </nav>
-
-        <div class="border-t border-popfit-light p-4">
-            <div class="flex items-center w-full">
-                <div class="w-8 h-8 rounded-sm bg-popfit-accent flex items-center justify-center text-popfit-dark font-black">A</div>
-                <div class="ml-3 flex-1 overflow-hidden">
-                    <p class="text-[12px] font-black text-white truncate uppercase"><?= $adminName ?></p>
-                    <p class="text-[10px] text-gray-400 truncate uppercase"><?= $adminUsername ?></p>
-                </div>
-                <a href="../../logout.php" class="text-gray-400 hover:text-white transition-colors"><i class="ph ph-sign-out text-xl"></i></a>
-            </div>
-        </div>
-    </aside>
+    <?php 
+        $rel = "../"; 
+        $activeIndex = "transaksi"; 
+        include '../../layout/sidebar_admin.php'; 
+    ?>
 
     <div class="flex-1 flex flex-col h-screen w-full relative">
         <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
-            <div class="flex items-center">
+            <div class="flex items-center flex-1">
                 <button id="openSidebar" class="md:hidden mr-4 text-popfit-dark"><i class="ph ph-list text-2xl"></i></button>
-                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Kelola Transaksi</h2>
+                <div class="relative w-full max-w-xs mr-4 hidden sm:block">
+                    <form action="" method="GET" class="relative">
+                        <?php if($filterStatus): ?>
+                            <input type="hidden" name="status" value="<?= $filterStatus ?>">
+                        <?php endif; ?>
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" name="keyword" value="<?= htmlspecialchars($keyword) ?>" placeholder="Cari Siswa/NIS..." class="w-full bg-popfit-bg border border-popfit-border rounded-sm pl-10 pr-4 py-2 text-[11px] font-bold text-popfit-dark focus:border-popfit-dark outline-none transition-all">
+                    </form>
+                </div>
+                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight hidden lg:block">Kelola Transaksi</h2>
             </div>
             <div class="flex items-center space-x-2">
-                <a href="transaksi.php" class="px-3 py-1.5 text-[10px] font-black uppercase <?= !$filterStatus ? 'bg-popfit-dark text-white' : 'bg-white text-popfit-textMuted border border-popfit-border' ?> rounded-sm transition-all">Semua</a>
-                <a href="?status=menunggu" class="px-3 py-1.5 text-[10px] font-black uppercase <?= $filterStatus=='menunggu' ? 'bg-popfit-dark text-white' : 'bg-white text-popfit-textMuted border border-popfit-border' ?> rounded-sm transition-all">Menunggu</a>
-                <a href="?status=dipinjam" class="px-3 py-1.5 text-[10px] font-black uppercase <?= $filterStatus=='dipinjam' ? 'bg-popfit-dark text-white' : 'bg-white text-popfit-textMuted border border-popfit-border' ?> rounded-sm transition-all">Aktif</a>
+                <a href="transaksi.php<?= $keyword ? '?keyword='.$keyword : '' ?>" class="px-3 py-1.5 text-[10px] font-black uppercase <?= !$filterStatus ? 'bg-popfit-dark text-white' : 'bg-white text-popfit-textMuted border border-popfit-border' ?> rounded-sm transition-all">Semua</a>
+                <a href="?status=menunggu<?= $keyword ? '&keyword='.$keyword : '' ?>" class="px-3 py-1.5 text-[10px] font-black uppercase <?= $filterStatus=='menunggu' ? 'bg-popfit-dark text-white' : 'bg-white text-popfit-textMuted border border-popfit-border' ?> rounded-sm transition-all">Menunggu</a>
+                <a href="?status=dipinjam<?= $keyword ? '&keyword='.$keyword : '' ?>" class="px-3 py-1.5 text-[10px] font-black uppercase <?= $filterStatus=='dipinjam' ? 'bg-popfit-dark text-white' : 'bg-white text-popfit-textMuted border border-popfit-border' ?> rounded-sm transition-all">Aktif</a>
             </div>
         </header>
 
@@ -269,9 +241,31 @@ $result = mysqli_query($connect, $query);
             Swal.fire({
                 title: title, text: text, icon: 'question', showCancelButton: true,
                 confirmButtonColor: confirmColor, cancelButtonColor: '#E4E4E7',
-                confirmButtonText: 'YA!', cancelButtonText: 'BATAL'
+                confirmButtonText: 'YA!', cancelButtonText: 'BATAL',
+                customClass: { popup: 'rounded-sm' }
             }).then((result) => { if (result.isConfirmed) window.location.href = url; });
         }
+
+        <?php 
+        $msgs = [
+            'bukan_jam_kerja' => ['icon'=>'warning', 'title'=>'DILUAR JAM KERJA', 'text'=>'Persetujuan hanya bisa dilakukan pukul 06.45 - 17.00.'],
+            'disetujui' => ['icon'=>'success', 'title'=>'BERHASIL', 'text'=>'Peminjaman telah disetujui.'],
+            'ditolak' => ['icon'=>'error', 'title'=>'DITOLAK', 'text'=>'Peminjaman telah dibatalkan.'],
+        ];
+        $msgKey = $_GET['msg'] ?? '';
+        if(isset($msgs[$msgKey])): 
+            $m = $msgs[$msgKey];
+        ?>
+        Swal.fire({
+            icon: '<?= $m['icon'] ?>',
+            title: '<?= $m['title'] ?>',
+            text: '<?= $m['text'] ?>',
+            confirmButtonColor: '#2A4736',
+            customClass: { popup: 'rounded-sm' }
+        }).then(() => {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        });
+        <?php endif; ?>
     </script>
 </body>
 </html>

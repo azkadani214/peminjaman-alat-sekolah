@@ -67,39 +67,24 @@ $pengajuanPinjam = mysqli_fetch_assoc(mysqli_query($connect, "SELECT COUNT(*) AS
 
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
 
-    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-popfit-dark text-white border-r border-popfit-dark h-full flex-shrink-0 z-50 sidebar -translate-x-full md:translate-x-0 md:static flex flex-col">
-        <div class="h-16 flex items-center px-6 border-b border-popfit-light bg-popfit-dark justify-between">
-            <div class="flex items-center">
-                <i class="ph-fill ph-paw-print text-popfit-accent text-2xl mr-3"></i>
-                <span class="text-xl font-black tracking-wide uppercase">PopFit Staff</span>
-            </div>
-            <button id="closeSidebar" class="md:hidden text-gray-400 hover:text-white"><i class="ph ph-x text-2xl"></i></button>
-        </div>
-
-        <nav class="flex-1 overflow-y-auto py-4">
-            <ul class="space-y-1">
-                <li><a href="dashboardPetugas.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent"><i class="ph ph-squares-four text-xl w-6"></i><span class="ml-3 font-bold">Dashboard</span></a></li>
-                <li class="px-6 py-2 mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Operasional</li>
-                <li><a href="alat/daftarAlat.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent"><i class="ph ph-basketball text-xl w-6"></i><span class="ml-3 font-bold">Katalog Alat</span></a></li>
-                <li><a href="transaksi/transaksi.php" class="flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent justify-between">
-                    <div class="flex items-center"><i class="ph ph-arrows-left-right text-xl w-6"></i><span class="ml-3 font-bold">Transaksi</span></div>
-                    <?php if($pengajuanPinjam > 0): ?><span class="bg-popfit-accent text-popfit-dark text-[10px] font-black px-2 py-0.5 rounded-sm"><?= $pengajuanPinjam ?></span><?php endif; ?>
-                </a></li>
-                <li><a href="notif.php" class="nav-active flex items-center px-6 py-3 text-gray-200 hover:bg-popfit-light transition-colors border-l-4 border-transparent"><i class="ph ph-bell text-xl w-6"></i><span class="ml-3 font-bold">Notifikasi</span></a></li>
-            </ul>
-        </nav>
-    </aside>
+    <?php 
+        $rel = "./"; 
+        $activeIndex = "notif"; 
+        include '../layout/sidebar_petugas.php'; 
+    ?>
 
     <div class="flex-1 flex flex-col h-screen w-full relative">
-        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
-            <div class="flex items-center space-x-4">
-                <button id="openSidebar" class="md:hidden text-popfit-dark"><i class="ph ph-list text-2xl"></i></button>
-                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Kotak Masuk Staff</h2>
-            </div>
-            <div class="flex items-center space-x-4">
-                <a href="?read_all=1" class="text-[10px] font-black uppercase text-popfit-textMuted hover:text-popfit-dark transition-all">Tandai Dibaca</a>
-            </div>
-        </header>
+        <?php 
+            $pageTitle = "Kotak Masuk Staff"; 
+            include '../layout/header_petugas.php'; 
+        ?>
+
+        <!-- Sub Header with Action -->
+        <div class="px-6 py-4 bg-white border-b border-popfit-border flex items-center justify-end">
+            <a href="?read_all=1" class="text-[10px] font-black uppercase text-popfit-textMuted hover:text-popfit-dark transition-all flex items-center">
+                <i class="ph ph-check-square mr-2"></i> Tandai Semua Dibaca
+            </a>
+        </div>
 
         <main class="flex-1 overflow-y-auto p-6">
             <div class="max-w-2xl mx-auto space-y-3">

@@ -72,15 +72,10 @@ $kategori_res = mysqli_query($connect, "SELECT * FROM kategori_alat_olahraga");
 
     <!-- MAIN CONTENT -->
     <div class="flex-1 flex flex-col h-screen w-full relative">
-        <header class="h-16 bg-popfit-surface border-b border-popfit-border flex items-center justify-between px-6 flex-shrink-0">
-            <div class="flex items-center">
-                <button id="openSidebar" class="md:hidden mr-4 text-popfit-dark"><i class="ph ph-list text-2xl"></i></button>
-                <h2 class="text-lg font-black text-popfit-dark uppercase tracking-tight">Katalog Alat</h2>
-            </div>
-            <a href="tambahAlat.php" class="bg-popfit-dark text-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.1em] rounded-sm hover:bg-popfit-light transition-all flex items-center">
-                <i class="ph ph-plus-bold mr-2"></i> Tambah Alat
-            </a>
-        </header>
+        <?php 
+            $pageTitle = "Katalog Alat"; 
+            include '../../layout/header_admin.php'; 
+        ?>
 
         <main class="flex-1 overflow-y-auto p-6">
             <!-- Filter Bar -->

@@ -117,14 +117,13 @@ function cekDetailKeterlambatan($batasKembali, $waktuKembali = null) {
     $jam = floor($totalMenit / 60);
     $menit = $totalMenit % 60;
     
-    // Rp 5.000 per 30 menit
+    // REQUIREMENT: Rp 5.000 per 30 menit (Rp10.000/jam)
     $jumlahPeriode = ceil($totalMenit / 30);
     $denda = $jumlahPeriode * 5000;
     
     $teks = "";
     if ($jam > 0) $teks .= $jam . " Jam ";
     if ($menit > 0) $teks .= $menit . " Menit";
-    if (empty($teks)) $teks = "Beberapa detik";
     
     return [
         'is_telat' => true,
@@ -133,8 +132,39 @@ function cekDetailKeterlambatan($batasKembali, $waktuKembali = null) {
         'jam' => $jam,
         'menit' => $menit,
         'denda' => $denda,
-        'teks' => $teks
+        'teks' => $teks ?: "Beberapa detik"
     ];
+}
+
+function uploadPembayaran($idTransaksi, $file, $metode) {
+    global $connect;
+    if($file['error'] !== 0) return ["error" => "File bukti wajib diunggah!"];
+    
+    $namaFile = $file['name'];
+    $tmpName = $file['tmp_name'];
+    $ext = pathinfo($namaFile, PATHINFO_EXTENSION);
+    $newName = "bukti_" . $idTransaksi . "_" . time() . "." . $ext;
+    
+    if(move_uploaded_file($tmpName, "../../uploads/" . $newName)){
+        mysqli_query($connect, "UPDATE transaksi SET bukti_pembayaran = '$newName', metode_pembayaran = '$metode', pembayaran = 'pending' WHERE id_transaksi = $idTransaksi");
+        return ["success" => true];
+    }
+    return ["error" => "Gagal mengunggah file."];
+}
+
+function verifikasiPembayaran($idTransaksi, $status, $idPetugas) {
+    global $connect;
+    $trx = mysqli_fetch_assoc(mysqli_query($connect, "SELECT id_user FROM transaksi WHERE id_transaksi = $idTransaksi"));
+    if($status == 'terima'){
+        mysqli_query($connect, "UPDATE transaksi SET pembayaran = 'lunas' WHERE id_transaksi = $idTransaksi");
+        tambahLog($idPetugas, "Menghapus denda (Approve) ID: $idTransaksi");
+        if($trx) tambahNotif($trx['id_user'], "Pembayaran denda Anda telah diverifikasi.", "transaksi/riwayat.php");
+    } else {
+        mysqli_query($connect, "UPDATE transaksi SET pembayaran = 'ditolak' WHERE id_transaksi = $idTransaksi");
+        tambahLog($idPetugas, "Menolak bukti denda ID: $idTransaksi");
+        if($trx) tambahNotif($trx['id_user'], "Bukti denda Anda ditolak. Silakan unggah ulang.", "denda/detailDenda.php?id=$idTransaksi");
+    }
+    return true;
 }
 
 function hitungDenda($batasKembali, $waktuKembali = null) {
