@@ -151,8 +151,17 @@ $result = mysqli_query($connect, $query);
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4 font-bold text-popfit-textMuted"><?= date('d.m.Y H:i', strtotime($row['waktu_pinjam'])) ?></td>
                             <td class="px-6 py-4">
-                                <p class="font-black text-popfit-dark uppercase"><?= htmlspecialchars($row['nama']) ?></p>
-                                <p class="text-[9px] font-bold text-popfit-textMuted uppercase">#<?= $row['nis'] ?></p>
+                                <div class="flex items-center">
+                                    <div>
+                                        <p class="font-black text-popfit-dark uppercase"><?= htmlspecialchars($row['nama']) ?></p>
+                                        <p class="text-[9px] font-bold text-popfit-textMuted uppercase">#<?= $row['nis'] ?></p>
+                                    </div>
+                                    <?php if($row['bukti_kartu']): ?>
+                                        <a href="../../uploads/<?= $row['bukti_kartu'] ?>" target="_blank" class="ml-3 w-7 h-7 flex items-center justify-center bg-blue-50 text-blue-500 rounded-sm hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Lihat Kartu Pelajar">
+                                            <i class="ph-bold ph-identification-card text-sm"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td class="px-6 py-4"><span class="px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest <?= $stColor ?>"><?= $st ?></span></td>
                             <td class="px-6 py-4 text-right">

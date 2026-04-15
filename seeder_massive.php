@@ -45,18 +45,18 @@ foreach ($users as $u) {
 
 // 3. ALAT OLAHRAGA (12)
 $alats = [
-    ['BOLA-01', 'Bola Basket Molten BG5000', 'Bola Besar', 'Bola basket premium dari kulit asli.', 10, 'basket1.png'],
-    ['BOLA-02', 'Bola Sepak Nike Flight', 'Bola Besar', 'Bola sepak teknologi Aerowsculpt.', 15, 'sepak1.png'],
-    ['RK-01', 'Yonex Astrox 88D Pro', 'Bulutangkis', 'Raket badminton power-heavy.', 8, 'raket1.png'],
-    ['RK-02', 'Victor Thruster K', 'Bulutangkis', 'Raket badminton stabil dan kuat.', 12, 'raket2.png'],
-    ['TM-01', 'Bat Butterfly Timo Boll', 'Tenis Meja', 'Bat tenis meja profesional.', 10, 'bat1.png'],
-    ['ATL-01', 'Lembing Nordic Carbon', 'Atletik', 'Lembing kompetisi atletik.', 5, 'lembing1.png'],
-    ['GYM-01', 'Dumbbell Rubber 5kg', 'Gym & Fitness', 'Beban tangan karet antislip.', 20, 'dumb1.png'],
-    ['GYM-02', 'Kettlebell 10kg', 'Gym & Fitness', 'Beban ayun untuk latihan core.', 10, 'kettle1.png'],
-    ['PAN-01', 'Busur Recurve Cartel', 'Panahan', 'Busur panah standar kompetisi.', 6, 'busur1.png'],
-    ['BD-01', 'Samsak Tinju Fairtex', 'Bela Diri', 'Samsak gantung kulit sintetis.', 4, 'samsak1.png'],
-    ['RN-01', 'Kacamata Renang Speedo', 'Renang', 'Kacamata renang anti-fog.', 25, 'kacamata1.png'],
-    ['ES-01', 'Logitech G Pro Mouse', 'E-Sport Accessories', 'Mouse gaming ultra-lightweight.', 10, 'mouse1.png']
+    ['BOLA-01', 'Bola Basket Molten BG5000', 'Bola Besar', 'Bola basket premium dari kulit asli.', 10, 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop'],
+    ['BOLA-02', 'Bola Sepak Nike Flight', 'Bola Besar', 'Bola sepak teknologi Aerowsculpt.', 15, 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2066&auto=format&fit=crop'],
+    ['RK-01', 'Yonex Astrox 88D Pro', 'Bulutangkis', 'Raket badminton power-heavy.', 8, 'https://images.unsplash.com/photo-1626225967045-2c76b2af610a?q=80&w=2070&auto=format&fit=crop'],
+    ['RK-02', 'Victor Thruster K', 'Bulutangkis', 'Raket badminton stabil dan kuat.', 12, 'https://images.unsplash.com/photo-1613912305664-67249fd31916?q=80&w=2070&auto=format&fit=crop'],
+    ['TM-01', 'Bat Butterfly Timo Boll', 'Tenis Meja', 'Bat tenis meja profesional.', 10, 'https://images.unsplash.com/photo-1534158914592-062992fbe900?q=80&w=2069&auto=format&fit=crop'],
+    ['ATL-01', 'Lembing Nordic Carbon', 'Atletik', 'Lembing kompetisi atletik.', 5, 'https://images.unsplash.com/photo-1526676037777-05a232554f77?q=80&w=2070&auto=format&fit=crop'],
+    ['GYM-01', 'Dumbbell Rubber 5kg', 'Gym & Fitness', 'Beban tangan karet antislip.', 20, 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?q=80&w=2070&auto=format&fit=crop'],
+    ['GYM-02', 'Kettlebell 10kg', 'Gym & Fitness', 'Beban ayun untuk latihan core.', 10, 'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?q=80&w=2070&auto=format&fit=crop'],
+    ['PAN-01', 'Busur Recurve Cartel', 'Panahan', 'Busur panah standar kompetisi.', 6, 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=2070&auto=format&fit=crop'],
+    ['BD-01', 'Samsak Tinju Fairtex', 'Bela Diri', 'Samsak gantung kulit sintetis.', 4, 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=2070&auto=format&fit=crop'],
+    ['RN-01', 'Kacamata Renang Speedo', 'Renang', 'Kacamata renang anti-fog.', 25, 'https://images.unsplash.com/photo-1600428791206-1a1b20629b31?q=80&w=2070&auto=format&fit=crop'],
+    ['ES-01', 'Logitech G Pro Mouse', 'E-Sport Accessories', 'Mouse gaming ultra-lightweight.', 10, 'https://images.unsplash.com/photo-1527814050087-3793815479db?q=80&w=1928&auto=format&fit=crop']
 ];
 foreach ($alats as $a) {
     runQuery($connect, "INSERT IGNORE INTO alat_olahraga (id_alat_olahraga, nama_alat_olahraga, kategori, deskripsi, stok, foto_alat_olahraga) 

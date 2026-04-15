@@ -25,10 +25,11 @@ if(isset($_GET['ajax'])){
     if(mysqli_num_rows($data) > 0){
         while($row = mysqli_fetch_assoc($data)){
             $foto = (!empty($row['foto_alat_olahraga'])) ? $row['foto_alat_olahraga'] : 'default.png';
+            $imgSrc = (strpos($foto, 'http') === 0) ? $foto : "../../asset/$foto";
             echo "
             <div class='bg-white border border-popfit-border rounded-sm overflow-hidden flex flex-col group hover:border-popfit-dark transition-all'>
                 <div class='h-40 bg-popfit-bg p-4 flex items-center justify-center relative border-b border-popfit-border overflow-hidden'>
-                    <img src='../../asset/$foto' class='h-full object-contain filter drop-shadow-sm group-hover:scale-110 transition-transform duration-300'>
+                    <img src='$imgSrc' class='h-full object-contain filter drop-shadow-sm group-hover:scale-110 transition-transform duration-300'>
                 </div>
                 <div class='p-4 flex-1 flex flex-col'>
                     <h4 class='text-[12px] font-black text-popfit-dark uppercase tracking-tight line-clamp-1'>".htmlspecialchars($row['nama_alat_olahraga'])."</h4>
@@ -37,8 +38,8 @@ if(isset($_GET['ajax'])){
                         <span class='text-[10px] font-black uppercase text-popfit-light'>Stok: ".$row['stok']."</span>
                         <div class='flex space-x-1'>
                             <button onclick='openModal(\"".$row['id_alat_olahraga']."\", \"".addslashes($row['nama_alat_olahraga'])."\", ".$row['stok'].", \"$foto\")' 
-                                    class='w-8 h-8 flex items-center justify-center bg-popfit-accent text-popfit-dark rounded-sm hover:bg-popfit-dark hover:text-white transition-all'><i class='ph ph-shopping-cart-bold'></i></button>
-                            <a href='detailAlat.php?id=".$row['id_alat_olahraga']."' class='w-8 h-8 flex items-center justify-center bg-white border border-popfit-border text-popfit-dark rounded-sm hover:bg-popfit-bg transition-all'><i class='ph ph-eye-bold'></i></a>
+                                    class='w-8 h-8 flex items-center justify-center bg-popfit-accent text-popfit-dark rounded-sm hover:bg-popfit-dark hover:text-white transition-all'><i class='ph-bold ph-shopping-cart'></i></button>
+                            <a href='detailAlat.php?id=".$row['id_alat_olahraga']."' class='w-8 h-8 flex items-center justify-center bg-white border border-popfit-border text-popfit-dark rounded-sm hover:bg-popfit-bg transition-all'><i class='ph-bold ph-eye'></i></a>
                         </div>
                     </div>
                 </div>
@@ -63,7 +64,8 @@ $countKeranjang = mysqli_fetch_assoc(mysqli_query($connect, "SELECT COUNT(*) as 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
     <script>
         tailwind.config = {
             theme: {

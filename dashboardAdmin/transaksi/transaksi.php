@@ -170,8 +170,17 @@ $result = mysqli_query($connect, $query);
                                 <p class="text-[10px] font-bold text-popfit-textMuted mt-0.5"><?= date('H:i', strtotime($row['waktu_pinjam'])) ?></p>
                             </td>
                             <td class="px-6 py-4">
-                                <p class="text-[12px] font-black text-popfit-dark uppercase tracking-tight"><?= htmlspecialchars($row['nama']) ?></p>
-                                <p class="text-[10px] font-bold text-popfit-textMuted tracking-widest uppercase">#<?= $row['nis'] ?> • <?= $row['kelas'] ?></p>
+                                <div class="flex items-center">
+                                    <div>
+                                        <p class="text-[12px] font-black text-popfit-dark uppercase tracking-tight"><?= htmlspecialchars($row['nama']) ?></p>
+                                        <p class="text-[10px] font-bold text-popfit-textMuted tracking-widest uppercase">#<?= $row['nis'] ?> • <?= $row['kelas'] ?></p>
+                                    </div>
+                                    <?php if($row['bukti_kartu']): ?>
+                                        <a href="../../uploads/<?= $row['bukti_kartu'] ?>" target="_blank" class="ml-3 w-7 h-7 flex items-center justify-center bg-blue-50 text-blue-500 rounded-sm hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Lihat Kartu Pelajar">
+                                            <i class="ph-bold ph-identification-card text-sm"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter <?= $stColor ?>"><?= $st ?></span>

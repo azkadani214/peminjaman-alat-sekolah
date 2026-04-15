@@ -123,14 +123,17 @@ function tolakTransaksi($idTransaksi, $idPetugas) {
     if($trx) tambahNotif($trx['id_user'], "Peminjaman Anda ditolak.", "transaksi/riwayat.php");
 }
 
-function checkoutKeranjang($idUser, $waktuPinjam, $batasKembali) {
+function checkoutKeranjang($idUser, $waktuPinjam, $batasKembali, $buktiKartu = null) {
     global $connect;
     $waktuPinjam = date("Y-m-d H:i:s", strtotime($waktuPinjam));
     $batasKembali = date("Y-m-d H:i:s", strtotime($batasKembali));
     $keranjang = queryReadData("SELECT k.*, a.stok FROM keranjang k JOIN alat_olahraga a ON k.id_alat_olahraga = a.id_alat_olahraga WHERE k.id_user = $idUser");
     if (empty($keranjang)) return ["error" => "Keranjang kosong!"];
     foreach ($keranjang as $item) { if ($item['jumlah'] > $item['stok']) return ["error" => "Stok alat tidak mencukupi."]; }
-    mysqli_query($connect, "INSERT INTO transaksi (id_user, status, waktu_pinjam, batas_kembali) VALUES ($idUser, 'menunggu', '$waktuPinjam', '$batasKembali')");
+    
+    $buktiVal = $buktiKartu ? "'$buktiKartu'" : "NULL";
+    mysqli_query($connect, "INSERT INTO transaksi (id_user, bukti_kartu, status, waktu_pinjam, batas_kembali) 
+                            VALUES ($idUser, $buktiVal, 'menunggu', '$waktuPinjam', '$batasKembali')");
     $idTransaksi = mysqli_insert_id($connect);
     foreach ($keranjang as $item) {
         $idA = $item['id_alat_olahraga']; $jml = $item['jumlah'];
