@@ -141,12 +141,13 @@ $result = mysqli_query($connect, $query);
                     <tbody class="divide-y divide-gray-50">
                         <?php while($row = mysqli_fetch_assoc($result)): 
                             $st = $row['status'];
-                            $stColor = match($st){
-                                'menunggu' => 'bg-popfit-accent text-popfit-dark',
-                                'dipinjam' => 'bg-popfit-dark text-white',
-                                'dikembalikan' => 'bg-popfit-bg text-popfit-textMuted',
-                                default => 'bg-gray-100'
-                            };
+                            $stColor = '';
+                            switch($st){
+                                case 'menunggu': $stColor = 'bg-popfit-accent text-popfit-dark'; break;
+                                case 'dipinjam': $stColor = 'bg-popfit-dark text-white'; break;
+                                case 'dikembalikan': $stColor = 'bg-popfit-bg text-popfit-textMuted'; break;
+                                default: $stColor = 'bg-gray-100'; break;
+                            }
                         ?>
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4 font-bold text-popfit-textMuted"><?= date('d.m.Y H:i', strtotime($row['waktu_pinjam'])) ?></td>

@@ -126,12 +126,13 @@ $result = mysqli_query($connect, $query);
                     <tbody class="divide-y divide-gray-50">
                         <?php while($row = mysqli_fetch_assoc($result)): 
                             $r = $row['role'];
-                            $rColor = match($r){
-                                'admin utama' => 'bg-red-50 text-red-500',
-                                'petugas' => 'bg-popfit-dark text-white',
-                                'siswa' => 'bg-popfit-bg text-popfit-textMuted',
-                                default => 'bg-gray-100'
-                            };
+                            $rColor = '';
+                            switch($r){
+                                case 'admin utama': $rColor = 'bg-red-50 text-red-500'; break;
+                                case 'petugas': $rColor = 'bg-popfit-dark text-white'; break;
+                                case 'siswa': $rColor = 'bg-popfit-bg text-popfit-textMuted'; break;
+                                default: $rColor = 'bg-gray-100'; break;
+                            }
                         ?>
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4">

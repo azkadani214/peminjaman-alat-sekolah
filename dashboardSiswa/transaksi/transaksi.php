@@ -20,14 +20,14 @@ $query = "SELECT t.*
 $result = mysqli_query($connect, $query);
 
 function getStatusInfo($st) {
-    return match($st) {
-        'menunggu' => ['label' => 'Menunggu', 'color' => 'bg-popfit-accent text-popfit-dark'],
-        'dipinjam' => ['label' => 'Dipinjam', 'color' => 'bg-popfit-dark text-white'],
-        'disetujui' => ['label' => 'Disetujui', 'color' => 'bg-green-500 text-white'],
-        'dikembalikan' => ['label' => 'Selesai', 'color' => 'bg-popfit-bg text-popfit-textMuted'],
-        'ditolak' => ['label' => 'Ditolak', 'color' => 'bg-red-50 text-red-500'],
-        default => ['label' => $st, 'color' => 'bg-gray-100']
-    };
+    switch($st) {
+        case 'menunggu': return ['label' => 'Menunggu', 'color' => 'bg-popfit-accent text-popfit-dark'];
+        case 'dipinjam': return ['label' => 'Dipinjam', 'color' => 'bg-popfit-dark text-white'];
+        case 'disetujui': return ['label' => 'Disetujui', 'color' => 'bg-green-500 text-white'];
+        case 'dikembalikan': return ['label' => 'Selesai', 'color' => 'bg-popfit-bg text-popfit-textMuted'];
+        case 'ditolak': return ['label' => 'Ditolak', 'color' => 'bg-red-50 text-red-500'];
+        default: return ['label' => $st, 'color' => 'bg-gray-100'];
+    }
 }
 ?>
 <!DOCTYPE html>
